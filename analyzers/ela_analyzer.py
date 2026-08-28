@@ -154,7 +154,7 @@ def analyze_ela(image_path: str) -> dict:
                     'block_variance': round(block_variance, 2),
                     'quadrant_cv': round(quadrant_cv, 4),
                     'ela_entropy': round(ela_entropy, 3),
-                    'ghost_jpeg_indicator': ghost_score > 0
+                    'ghost_jpeg_indicator': bool(ghost_score > 0)
                 }
             },
             'visualization': img_str
