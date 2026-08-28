@@ -172,11 +172,16 @@ def generate_summary(score, verdict, confidence, analyses):
     if 'spectral' in analyses:
         spec = analyses['spectral']
         metrics = spec.get('details', {}).get('metrics', {})
-        vae_decay = metrics.get('vae_chroma_decay_ratio', 1.0)
-        if vae_decay > 2.8:
-            key_findings.append("Atenuação de alta frequência nos canais de cor compatível com decodificador VAE de difusão")
-        elif metrics.get('anomalous_peaks', 0) >= 3:
-            key_findings.append("Picos harmônicos espectrais detectados na transformada de Fourier")
+        flatness = metrics.get('hf_spectral_flatness', 0.5)
+        peaks = metrics.get('anomalous_peaks', 0)
+        alpha = metrics.get('spectral_slope_alpha', 1.0)
+        r2 = metrics.get('power_law_fit_r2', 1.0)
+        if 0.85 <= alpha <= 1.30 and r2 > 0.94:
+            key_findings.append("Decaimento espectral de Fourier aderente à lei de potência óptica natural (1/f)")
+        elif flatness > 0.85:
+            key_findings.append("Ruído espectral de alta frequência excessivamente plano (típico de difusão de IA)")
+        elif peaks >= 3:
+            key_findings.append("Picos harmônicos periódicos detectados no espectro de Fourier")
 
     if 'statistical' in analyses:
         stat = analyses['statistical']
