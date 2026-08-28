@@ -58,7 +58,10 @@ def calculate_composite_score(analyses):
     total_weight = 0.0
 
     for key, weight in base_weights.items():
-        if key in analyses and 'score' in analyses[key]:
+        # Analisadores que falharam (exceção interna) são EXCLUÍDOS do composite:
+        # antes, um score neutro (50) de fallback entrava como se fosse uma medição
+        # válida, distorcendo o resultado final sem avisar o usuário.
+        if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             total_score += weight * analyses[key]['score']
             total_weight += weight
 
@@ -74,13 +77,13 @@ def calculate_concordance(analyses):
     Returns confidence level ('high', 'medium', 'low') and agreement ratio.
     """
     scores = []
-    # Collect visual and active forensic analyzers
+    # Collect visual and active forensic analyzers (exclui analisadores que falharam)
     for key in ['noise', 'spectral', 'statistical', 'ela', 'artifacts']:
-        if key in analyses and 'score' in analyses[key]:
+        if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             scores.append(analyses[key]['score'])
 
     meta = analyses.get('metadata', {})
-    if meta.get('has_signal', False) and 'score' in meta:
+    if meta.get('has_signal', False) and 'score' in meta and not meta.get('failed'):
         scores.append(meta['score'])
 
     if len(scores) < 3:
@@ -269,15 +272,21 @@ def analyze():
             ('artifacts', analyze_artifacts, original_path),
         ]
 
+        failed_analyzers = []
         for key, func, path in analyzer_configs:
             try:
                 analyses[key] = func(path)
             except Exception as e:
+                # 'failed': True marca explicitamente que este NÃO é um resultado válido.
+                # calculate_composite_score e calculate_concordance excluem esses
+                # analisadores do cálculo em vez de tratar o score 50 como neutro real.
                 analyses[key] = {
                     'score': 50,
+                    'failed': True,
                     'details': {'metrics': {}},
                     'findings': [f'Erro na análise: {str(e)}']
                 }
+                failed_analyzers.append(key)
                 traceback.print_exc()
 
         # Calculate composite score with dynamic weighting
@@ -289,6 +298,13 @@ def analyze():
 
         # Generate summary
         summary = generate_summary(score, verdict, confidence, analyses)
+
+        if failed_analyzers:
+            summary['text'] += (
+                f" Atenção: {len(failed_analyzers)} analisador(es) falharam durante o "
+                f"processamento ({', '.join(failed_analyzers)}) e foram excluídos do "
+                f"cálculo — o resultado reflete apenas os analisadores bem-sucedidos."
+            )
 
         # Processing time
         elapsed = round(time.time() - start_time, 2)
@@ -302,6 +318,7 @@ def analyze():
             'agreement': round(agreement, 2),
             'summary': summary,
             'analyses': analyses,
+            'failed_analyzers': failed_analyzers,
             'image_info': {
                 'filename': file.filename,
                 'format': image_format,
