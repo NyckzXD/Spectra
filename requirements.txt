@@ -1,0 +1,5 @@
+Flask==3.1.1
+Pillow==11.2.1
+numpy==2.2.6
+scipy==1.15.3
+exifread==3.1.0
