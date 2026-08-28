@@ -7,137 +7,159 @@
     <meta name="description" content="Ferramenta avançada de análise forense digital para detectar imagens geradas por inteligência artificial utilizando análise espectral, de ruído, ELA e metadados.">
     <meta name="keywords" content="AI detection, forensic analysis, image forensics, deepfake detection, spectra">
     <meta name="author" content="Spectra">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%2300d4ff'/%3E%3Cstop offset='100%25' style='stop-color:%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='url(%23g)' stroke-width='6'/%3E%3Cpath d='M30 50 L45 35 L50 45 L60 25 L70 50' fill='none' stroke='url(%23g)' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2359A5D8'/%3E%3Cpath d='M8 22L13 10L16 16L20 8L24 22' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="bg-mesh"></div>
-
-    <div class="app-container">
-        <header class="header" id="appHeader">
-            <div class="logo-group">
-                <div class="logo-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 100 100" fill="none">
-                        <circle cx="50" cy="50" r="42" stroke="url(#logoGrad)" stroke-width="5"/>
-                        <path d="M28 55 L40 35 L48 48 L58 22 L72 55" stroke="url(#logoGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                        <defs>
-                            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#00d4ff"/>
-                                <stop offset="100%" stop-color="#7c3aed"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="logo">SPECTRA</h1>
-                    <p class="tagline">AI Image Forensic Analyzer</p>
+    <div class="app-wrapper">
+        <!-- ====== HEADER / NAVBAR ====== -->
+        <header class="navbar" id="appHeader">
+            <div class="navbar-inner">
+                <div class="logo-group">
+                    <div class="logo-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 20L9 6L12 13L17 4L21 20"/>
+                        </svg>
+                    </div>
+                    <span class="logo-text">SPECTRA</span>
                 </div>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- Upload Section -->
-            <section id="uploadSection" class="upload-section">
-                <div id="dropZone" class="drop-zone">
-                    <div class="drop-zone-bg"></div>
-                    <div class="drop-zone-content">
-                        <div class="upload-icon-wrapper">
-                            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <div class="upload-icon-ring"></div>
+            <!-- ====== HERO + UPLOAD SECTION ====== -->
+            <section id="uploadSection" class="hero-section">
+                <div class="hero-inner">
+                    <!-- Left: Text Content -->
+                    <div class="hero-text">
+                        <h1 class="hero-title">Verifique a origem de qualquer imagem em poucos segundos</h1>
+                        <p class="hero-subtitle">O SPECTRA é um motor de visão computacional desenvolvido para identificar imagens sintéticas geradas pelos diversos modelos de inteligência artificial.</p>
+
+                        <div class="how-it-works">
+                            <h2 class="how-title">Como funciona:</h2>
+                            <div class="steps-list">
+                                <div class="step-item">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <h3 class="step-name">Upload</h3>
+                                        <p class="step-desc">Envie sua imagem em formato PNG, JPG ou WEBP. O sistema faz a leitura direta e padroniza a resolução sem alterar os dados visuais brutos.</p>
+                                    </div>
+                                </div>
+                                <div class="step-item">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <h3 class="step-name">Análise de padrões</h3>
+                                        <p class="step-desc">O motor examina inconsistências de iluminação, distorções em nível de pixel e assinaturas de frequência deixadas por modelos generativos.</p>
+                                    </div>
+                                </div>
+                                <div class="step-item">
+                                    <div class="step-number">3</div>
+                                    <div class="step-content">
+                                        <h3 class="step-name">Diagnóstico e Veredito final</h3>
+                                        <p class="step-desc">Os resultados são compilados em um relatório forense detalhado com score de probabilidade e achados individuais de cada analisador.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h2 class="upload-title">Envie uma imagem para análise</h2>
-                        <p class="upload-subtitle">Arraste e solte, clique para selecionar, ou cole do clipboard <kbd>Ctrl+V</kbd></p>
-                        <div class="upload-formats">
-                            <span class="format-badge">JPEG</span>
-                            <span class="format-badge">PNG</span>
-                            <span class="format-badge">WebP</span>
-                            <span class="format-badge">BMP</span>
-                            <span class="format-badge">TIFF</span>
-                        </div>
-                        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff" hidden>
-                        <button id="browseBtn" class="primary-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            Selecionar Arquivo
-                        </button>
-                        <p class="upload-limit">Máximo 16 MB</p>
                     </div>
-                    <!-- Image preview (shown after file is selected) -->
-                    <div id="uploadPreview" class="upload-preview hidden">
-                        <div class="upload-preview-bg" id="previewBg"></div>
-                        <img id="uploadPreviewImg" src="" alt="Preview">
-                        <div class="upload-preview-info">
-                            <span id="previewFileName"></span>
-                            <span id="previewFileSize"></span>
+
+                    <!-- Right: Upload Card -->
+                    <div class="upload-card" id="dropZone">
+                        <div class="upload-card-content" id="uploadContent">
+                            <div class="upload-icon-wrapper">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#59A5D8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                                    <path d="M12 12v6"></path>
+                                    <path d="m9 15 3-3 3 3"></path>
+                                </svg>
+                            </div>
+                            <h2 class="upload-title">Envie uma imagem para análise</h2>
+                            <p class="upload-subtitle">Arraste e solte, clique para selecionar, ou cole do clipboard <kbd>CTRL+V</kbd></p>
+                            <div class="upload-formats">
+                                <span class="format-badge">PNG</span>
+                                <span class="format-badge">JPEG</span>
+                                <span class="format-badge">WEBP</span>
+                                <span class="upload-limit">Máximo 16MB</span>
+                            </div>
+                            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff" hidden>
                         </div>
-                        <button id="analyzeBtn" class="primary-btn analyze-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            Analisar Imagem
-                        </button>
-                        <button id="cancelBtn" class="secondary-btn">Cancelar</button>
+
+                        <!-- Image preview (shown after file is selected) -->
+                        <div id="uploadPreview" class="upload-preview hidden">
+                            <img id="uploadPreviewImg" src="" alt="Preview">
+                            <div class="upload-preview-info">
+                                <span id="previewFileName"></span>
+                                <span class="info-sep">·</span>
+                                <span id="previewFileSize"></span>
+                            </div>
+                            <button id="analyzeBtn" class="primary-btn analyze-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Analisar Imagem
+                            </button>
+                            <button id="cancelBtn" class="secondary-btn">Cancelar</button>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Error Section -->
+            <!-- ====== ERROR SECTION ====== -->
             <section id="errorSection" class="error-section hidden">
-                <div class="error-content">
+                <div class="error-card">
                     <div class="error-icon-wrapper">
-                        <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </div>
-                    <h2>Erro na Análise</h2>
+                    <h2 class="error-title">Erro na Análise</h2>
                     <p class="error-message" id="errorMessage"></p>
                     <button id="retryBtn" class="primary-btn">Tentar Novamente</button>
                 </div>
             </section>
 
-            <!-- Loading Section -->
+            <!-- ====== LOADING SECTION ====== -->
             <section id="loadingSection" class="loading-section hidden">
-                <div class="loading-visual">
-                    <div class="scanner-ring">
-                        <div class="scanner-ring-inner"></div>
+                <div class="loading-card">
+                    <div class="loading-visual">
+                        <div class="scanner-ring">
+                            <div class="scanner-ring-inner"></div>
+                        </div>
                     </div>
+                    <h3 class="loading-text">Analisando Imagem<span class="loading-dots"></span></h3>
                     <div class="scanner-bar">
                         <div class="scanner-line"></div>
                     </div>
+                    <ul class="progress-steps" id="progressSteps">
+                        <li class="step active" data-step="0">
+                            <span class="step-icon">◯</span>
+                            <span>Extraindo Metadados...</span>
+                        </li>
+                        <li class="step" data-step="1">
+                            <span class="step-icon">◯</span>
+                            <span>Análise de Nível de Erro (ELA)...</span>
+                        </li>
+                        <li class="step" data-step="2">
+                            <span class="step-icon">◯</span>
+                            <span>Computando Mapa Espectral (FFT)...</span>
+                        </li>
+                        <li class="step" data-step="3">
+                            <span class="step-icon">◯</span>
+                            <span>Analisando Padrões de Ruído...</span>
+                        </li>
+                        <li class="step" data-step="4">
+                            <span class="step-icon">◯</span>
+                            <span>Análise Estatística de Pixels...</span>
+                        </li>
+                        <li class="step" data-step="5">
+                            <span class="step-icon">◯</span>
+                            <span>Compilando Relatório Forense...</span>
+                        </li>
+                    </ul>
                 </div>
-                <h3 class="loading-text">Analisando Imagem<span class="loading-dots"></span></h3>
-                <ul class="progress-steps" id="progressSteps">
-                    <li class="step active" data-step="0">
-                        <span class="step-icon">◯</span>
-                        <span>Extraindo Metadados...</span>
-                    </li>
-                    <li class="step" data-step="1">
-                        <span class="step-icon">◯</span>
-                        <span>Análise de Nível de Erro (ELA)...</span>
-                    </li>
-                    <li class="step" data-step="2">
-                        <span class="step-icon">◯</span>
-                        <span>Computando Mapa Espectral (FFT)...</span>
-                    </li>
-                    <li class="step" data-step="3">
-                        <span class="step-icon">◯</span>
-                        <span>Analisando Padrões de Ruído...</span>
-                    </li>
-                    <li class="step" data-step="4">
-                        <span class="step-icon">◯</span>
-                        <span>Análise Estatística de Pixels...</span>
-                    </li>
-                    <li class="step" data-step="5">
-                        <span class="step-icon">◯</span>
-                        <span>Compilando Relatório Forense...</span>
-                    </li>
-                </ul>
             </section>
 
-            <!-- Results Section -->
+            <!-- ====== RESULTS SECTION ====== -->
             <section id="resultsSection" class="results-section hidden">
                 <!-- Verdict Hero -->
                 <div class="verdict-hero" id="verdictHero">

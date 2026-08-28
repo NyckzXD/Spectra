@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM References ---
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
-    const browseBtn = document.getElementById('browseBtn');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const retryBtn = document.getElementById('retryBtn');
@@ -13,9 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('resultsSection');
     const errorSection = document.getElementById('errorSection');
 
+    const uploadContent = document.getElementById('uploadContent');
     const uploadPreview = document.getElementById('uploadPreview');
     const uploadPreviewImg = document.getElementById('uploadPreviewImg');
-    const previewBg = document.getElementById('previewBg');
     const previewFileName = document.getElementById('previewFileName');
     const previewFileSize = document.getElementById('previewFileSize');
 
@@ -48,10 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getColorForScore(score) {
-        if (score <= 25) return '#10b981';
-        if (score <= 50) return '#fbbf24';
-        if (score <= 75) return '#f97316';
-        return '#ef4444';
+        if (score <= 25) return '#10B981';
+        if (score <= 50) return '#F59E0B';
+        if (score <= 75) return '#F97316';
+        return '#EF4444';
     }
 
     // --- File Selection & Preview ---
@@ -61,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             uploadPreviewImg.src = e.target.result;
-            previewBg.style.backgroundImage = `url(${e.target.result})`;
             imagePreview.src = e.target.result;
         };
         reader.readAsDataURL(file);
@@ -70,17 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
         previewFileSize.textContent = formatFileSize(file.size);
 
         // Switch from upload content to preview
-        dropZone.querySelector('.drop-zone-content').classList.add('hidden');
+        uploadContent.classList.add('hidden');
         uploadPreview.classList.remove('hidden');
     }
 
     function resetUpload() {
         selectedFile = null;
         fileInput.value = '';
-        dropZone.querySelector('.drop-zone-content').classList.remove('hidden');
+        uploadContent.classList.remove('hidden');
         uploadPreview.classList.add('hidden');
         uploadPreviewImg.src = '';
-        previewBg.style.backgroundImage = '';
     }
 
     function handleFile(file) {
@@ -98,13 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-    browseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.click();
-    });
-
     dropZone.addEventListener('click', (e) => {
-        if (e.target === browseBtn || e.target.closest('.primary-btn') || e.target.closest('.secondary-btn')) return;
+        if (e.target.closest('.primary-btn') || e.target.closest('.secondary-btn')) return;
         if (!uploadPreview.classList.contains('hidden')) return;
         fileInput.click();
     });
@@ -308,10 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
             verdictSummary.style.display = 'none';
         }
 
-        // Hero border glow
+        // Hero border accent
         const verdictHero = document.getElementById('verdictHero');
-        verdictHero.style.borderColor = `${color}25`;
-        verdictHero.style.boxShadow = `0 16px 48px ${color}10, inset 0 1px 0 ${color}15`;
+        verdictHero.style.borderColor = `${color}30`;
     }
 
     function renderKeyFindings(findings) {
@@ -323,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keyFindingsSection.classList.remove('hidden');
         keyFindingsList.innerHTML = '';
 
-        const icons = ['🔍', '📋', '📡', '🔬', '⚡'];
+        const icons = ['', '', '', '', ''];
         findings.forEach((finding, i) => {
             const chip = document.createElement('div');
             chip.className = 'finding-chip';
@@ -364,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
             ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.strokeStyle = '#E2E8F0';
             ctx.lineCap = 'round';
             ctx.stroke();
 
@@ -380,22 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Glow effect
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.lineWidth = lineWidth + 6;
-            ctx.strokeStyle = color + '15';
-            ctx.stroke();
-
             // Score text
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold 46px Inter, sans-serif`;
+            ctx.fillStyle = '#0F172A';
+            ctx.font = `bold 46px Outfit, Inter, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(`${currentScore}`, centerX, centerY - 6);
 
             // Label
-            ctx.font = `600 10px 'JetBrains Mono', monospace`;
+            ctx.font = `600 10px Inter, sans-serif`;
             ctx.fillStyle = color;
             ctx.fillText('PROBABILIDADE AI', centerX, centerY + 26);
 
@@ -444,12 +428,12 @@ document.addEventListener('DOMContentLoaded', () => {
         analysisGrid.innerHTML = '';
 
         const cardDefs = [
-            { key: 'metadata',    icon: '📋', title: 'Análise de Metadados',       desc: 'EXIF, C2PA, assinaturas de IA' },
-            { key: 'ela',         icon: '🔍', title: 'Error Level Analysis',       desc: 'Compressão JPEG e uniformidade' },
-            { key: 'spectral',    icon: '📡', title: 'Análise Espectral (FFT)',     desc: 'Domínio de frequência e picos' },
-            { key: 'noise',       icon: '📊', title: 'Análise de Ruído',           desc: 'Padrões de ruído e PRNU' },
-            { key: 'statistical', icon: '📈', title: 'Análise Estatística',        desc: 'Benford, GLCM, entropia' },
-            { key: 'artifacts',   icon: '🔬', title: 'Análise de Artefatos',       desc: 'JPEG grid, checkerboard, edges' }
+            { key: 'metadata', icon: '', title: 'Análise de Metadados', desc: 'EXIF, C2PA, assinaturas de IA' },
+            { key: 'ela', icon: '', title: 'Error Level Analysis', desc: 'Compressão JPEG e uniformidade' },
+            { key: 'spectral', icon: '', title: 'Análise Espectral (FFT)', desc: 'Domínio de frequência e picos' },
+            { key: 'noise', icon: '', title: 'Análise de Ruído', desc: 'Padrões de ruído e PRNU' },
+            { key: 'statistical', icon: '', title: 'Análise Estatística', desc: 'Benford, GLCM, entropia' },
+            { key: 'artifacts', icon: '', title: 'Análise de Artefatos', desc: 'JPEG grid, checkerboard, edges' }
         ];
 
         cardDefs.forEach((def, index) => {
@@ -482,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const limited = Object.fromEntries(metaEntries.slice(0, 8));
                         contentHTML += renderDetailsTable(limited);
                         if (metaEntries.length > 8) {
-                            contentHTML += `<p style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.4rem;">+${metaEntries.length - 8} campos adicionais</p>`;
+                            contentHTML += `<p style="color: var(--text-muted); font-size: 11px; margin-top: 6px;">+${metaEntries.length - 8} campos adicionais</p>`;
                         }
                     }
                 } else if (data.details.metrics) {
@@ -494,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.visualization) {
                 contentHTML += `<img src="data:image/png;base64,${data.visualization}" class="card-visualization" alt="${def.title}" title="Clique para ampliar">`;
             } else if (def.key === 'statistical' && data.histogram_data) {
-                contentHTML += `<div style="height: 120px; width: 100%; margin-top: 0.75rem;"><canvas id="chart-${def.key}" class="card-visualization"></canvas></div>`;
+                contentHTML += `<div style="height: 120px; width: 100%; margin-top: 12px;"><canvas id="chart-${def.key}" class="card-visualization"></canvas></div>`;
             }
 
             card.innerHTML = `
@@ -505,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="score-bar-container">
-                    <div class="score-bar-fill" style="background-color: ${color}; color: ${color};" data-target="${data.score}%"></div>
+                    <div class="score-bar-fill" style="background-color: ${color};" data-target="${data.score}%"></div>
                 </div>
                 <div class="card-content">
                     <span class="card-score-text" style="color: ${color}">Score: ${data.score}%</span>
@@ -540,9 +524,9 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: Array.from({ length: 32 }, (_, i) => i * 8),
                 datasets: [
-                    { label: 'R', data: data.r || [], backgroundColor: 'rgba(239, 68, 68, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 },
-                    { label: 'G', data: data.g || [], backgroundColor: 'rgba(16, 185, 129, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 },
-                    { label: 'B', data: data.b || [], backgroundColor: 'rgba(59, 130, 246, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 }
+                    { label: 'R', data: data.r || [], backgroundColor: 'rgba(239, 68, 68, 0.7)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'G', data: data.g || [], backgroundColor: 'rgba(16, 185, 129, 0.7)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'B', data: data.b || [], backgroundColor: 'rgba(89, 165, 216, 0.7)', barPercentage: 1.0, categoryPercentage: 1.0 }
                 ]
             },
             options: {
