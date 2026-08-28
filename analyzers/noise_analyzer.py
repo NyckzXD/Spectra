@@ -108,7 +108,7 @@ def analyze_noise(image_path: str) -> dict:
             is_gaussian = True
 
         metrics['noise_gaussian_p'] = round(float(p_value), 6)
-        metrics['noise_is_gaussian'] = is_gaussian
+        metrics['noise_is_gaussian'] = bool(is_gaussian)
 
         # --- PRNU-like analysis (simplified) ---
         # Real cameras have fixed-pattern noise. We check if noise has spatial structure.
