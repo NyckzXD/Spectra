@@ -92,8 +92,13 @@ def analyze_noise(image_path: str) -> dict:
         noise_g = noise[:, :, 1].ravel()
         noise_b = noise[:, :, 2].ravel()
 
+        # Amostragem DETERMINÍSTICA: usa um RNG com seed fixa (não np.random global) para que
+        # a mesma imagem sempre produza o mesmo score em execuções repetidas. Antes, o uso de
+        # np.random.choice sem seed fazia o score de correlação entre canais variar a cada análise
+        # da mesma imagem, o que é inaceitável para uma ferramenta forense.
         sample_size = min(40000, len(noise_r))
-        idx = np.random.choice(len(noise_r), sample_size, replace=False)
+        rng = np.random.default_rng(seed=42)
+        idx = rng.choice(len(noise_r), sample_size, replace=False)
 
         rg_corr = float(np.corrcoef(noise_r[idx], noise_g[idx])[0, 1])
         rb_corr = float(np.corrcoef(noise_r[idx], noise_b[idx])[0, 1])
