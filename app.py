@@ -1,8 +1,10 @@
 import os
 import time
 import traceback
+import numpy as np
 from flask import Flask, request, jsonify, send_from_directory
 from PIL import Image
+
 from analyzers.metadata_analyzer import analyze_metadata
 from analyzers.ela_analyzer import analyze_ela
 from analyzers.spectral_analyzer import analyze_spectral
@@ -11,7 +13,7 @@ from analyzers.statistical_analyzer import analyze_statistical
 from analyzers.artifact_analyzer import analyze_artifacts
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff'}
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -23,38 +25,63 @@ def allowed_file(filename):
 
 
 def calculate_composite_score(analyses):
-    """Calculate weighted composite score from all analyses."""
-    weights = {
-        'metadata': 0.25,
+    """
+    Calculate dynamically weighted composite score from all forensic analyses.
+    Adapts weights based on metadata signal presence to prevent biasing images without EXIF.
+    """
+    base_weights = {
+        'metadata': 0.28,
+        'noise': 0.22,
         'spectral': 0.20,
-        'noise': 0.20,
-        'statistical': 0.15,
+        'statistical': 0.16,
         'ela': 0.12,
-        'artifacts': 0.08
+        'artifacts': 0.12
     }
 
-    total_score = 0
-    total_weight = 0
+    meta = analyses.get('metadata', {})
+    has_meta_signal = meta.get('has_signal', False)
+    meta_score = meta.get('score', 50)
 
-    for key, weight in weights.items():
+    # Dynamic adjustment based on metadata signal
+    if has_meta_signal and meta_score >= 90:
+        # Decisive AI signatures (prompts, generator tags, C2PA)
+        base_weights['metadata'] = 0.45
+    elif has_meta_signal and meta_score <= 15:
+        # Decisive authentic camera EXIF (Make, Model, ISO, Exposure, GPS)
+        base_weights['metadata'] = 0.35
+    elif not has_meta_signal:
+        # Neutral metadata (stripped EXIF from web/social media)
+        # Exclude metadata from pulling the composite score
+        base_weights['metadata'] = 0.0
+
+    total_score = 0.0
+    total_weight = 0.0
+
+    for key, weight in base_weights.items():
         if key in analyses and 'score' in analyses[key]:
             total_score += weight * analyses[key]['score']
             total_weight += weight
 
     if total_weight > 0:
-        return round(total_score / total_weight)
-    return 50  # inconclusive
+        composite = total_score / total_weight
+        return int(round(min(max(composite, 0), 100)))
+    return 50  # fallback inconclusive
 
 
 def calculate_concordance(analyses):
     """
-    Calculate inter-analyzer concordance.
-    Returns confidence level based on how much analyzers agree.
+    Calculate inter-analyzer concordance and agreement ratio.
+    Returns confidence level ('high', 'medium', 'low') and agreement ratio.
     """
     scores = []
-    for key in ['metadata', 'ela', 'spectral', 'noise', 'statistical', 'artifacts']:
+    # Collect visual and active forensic analyzers
+    for key in ['noise', 'spectral', 'statistical', 'ela', 'artifacts']:
         if key in analyses and 'score' in analyses[key]:
             scores.append(analyses[key]['score'])
+
+    meta = analyses.get('metadata', {})
+    if meta.get('has_signal', False) and 'score' in meta:
+        scores.append(meta['score'])
 
     if len(scores) < 3:
         return 'low', 0.0
@@ -62,9 +89,9 @@ def calculate_concordance(analyses):
     # Classify each score
     classifications = []
     for s in scores:
-        if s <= 35:
+        if s <= 38:
             classifications.append('real')
-        elif s >= 65:
+        elif s >= 62:
             classifications.append('ai')
         else:
             classifications.append('inconclusive')
@@ -75,55 +102,53 @@ def calculate_concordance(analyses):
     most_common, most_count = counts.most_common(1)[0]
 
     agreement_ratio = most_count / len(scores)
+    score_std = float(np.std(scores)) if len(scores) > 1 else 30.0
 
-    # Standard deviation of scores (lower = more agreement)
-    score_std = float(np.std(scores)) if len(scores) > 1 else 50.0
-
-    if agreement_ratio >= 0.8 and score_std < 20:
+    if agreement_ratio >= 0.75 and score_std < 18:
         return 'high', agreement_ratio
-    elif agreement_ratio >= 0.6 or score_std < 25:
+    elif agreement_ratio >= 0.55 or score_std < 24:
         return 'medium', agreement_ratio
     else:
         return 'low', agreement_ratio
 
 
 def get_verdict(score):
-    """Get verdict text and level based on score."""
+    """Get human-readable verdict and category level based on calibrated score."""
     if score <= 25:
-        return 'Provavelmente Autêntica', 'real'
-    elif score <= 45:
-        return 'Inconclusivo — tendência real', 'inconclusive-real'
-    elif score <= 55:
-        return 'Inconclusivo', 'inconclusive'
-    elif score <= 75:
-        return 'Suspeito — tendência AI', 'suspect'
+        return 'Provavelmente Autêntica (Foto Real)', 'real'
+    elif score <= 40:
+        return 'Tendência Autêntica (Baixo Risco IA)', 'inconclusive-real'
+    elif score <= 59:
+        return 'Inconclusivo (Sinais Mistos)', 'inconclusive'
+    elif score <= 74:
+        return 'Suspeito — Tendência IA', 'suspect'
     else:
-        return 'Provavelmente Gerada por AI', 'ai'
+        return 'Provavelmente Gerada por IA', 'ai'
 
 
 def generate_summary(score, verdict, confidence, analyses):
-    """Generate a human-readable summary of the analysis."""
+    """Generate an informative technical summary of the forensic findings."""
     summary_parts = []
 
     if score <= 25:
         summary_parts.append(
-            "A análise forense indica alta probabilidade de esta ser uma imagem autêntica (não gerada por IA)."
+            "A análise forense multi-espectral indica alta probabilidade de a imagem ser uma captura autêntica de câmera física."
         )
-    elif score <= 45:
+    elif score <= 40:
         summary_parts.append(
-            "A análise forense sugere que esta imagem provavelmente é autêntica, mas alguns indicadores são inconclusivos."
+            "Os indicadores forenses apontam predominância de características naturais de captura óptica, com baixo indício de síntese por IA."
         )
-    elif score <= 55:
+    elif score <= 59:
         summary_parts.append(
-            "A análise forense não conseguiu determinar com confiança se esta imagem é real ou gerada por IA."
+            "Os padrões forenses apresentam sinais mistos ou insuficientes para uma classificação categórica entre foto real e geração por IA."
         )
-    elif score <= 75:
+    elif score <= 74:
         summary_parts.append(
-            "A análise forense detectou indicadores suspeitos compatíveis com geração por IA."
+            "Foram detectadas anomalias estatísticas e padrões de síntese característicos de modelos de difusão de inteligência artificial."
         )
     else:
         summary_parts.append(
-            "A análise forense indica alta probabilidade de esta imagem ter sido gerada por inteligência artificial."
+            "Múltiplos analisadores identificaram fortes assinaturas forenses de síntese algorítmica por IA (Difusão/VAE/Redes Neurais)."
         )
 
     # Key findings
@@ -135,35 +160,48 @@ def generate_summary(score, verdict, confidence, analyses):
             for f in meta['findings'][:2]:
                 key_findings.append(f)
 
-    if 'spectral' in analyses:
-        spec = analyses['spectral']
-        if spec.get('details', {}).get('metrics', {}).get('anomalous_peaks', 0) > 3:
-            key_findings.append("Picos espectrais anômalos detectados (possível fingerprint de GAN)")
-
     if 'noise' in analyses:
         noise = analyses['noise']
-        prnu = noise.get('details', {}).get('metrics', {}).get('prnu_indicator', 0)
-        if prnu > 0.1:
-            key_findings.append("Padrão PRNU de sensor detectado (indicador de câmera real)")
+        metrics = noise.get('details', {}).get('metrics', {})
+        p_corr = metrics.get('poisson_correlation', 0)
+        if p_corr > 0.20:
+            key_findings.append("Ruído com correlação física Poisson-Gaussiana (típico de sensor fotográfico)")
+        elif p_corr < -0.05:
+            key_findings.append("Distribuição de ruído não-física (indicador de síntese algorítmica)")
+
+    if 'spectral' in analyses:
+        spec = analyses['spectral']
+        metrics = spec.get('details', {}).get('metrics', {})
+        vae_decay = metrics.get('vae_chroma_decay_ratio', 1.0)
+        if vae_decay > 2.8:
+            key_findings.append("Atenuação de alta frequência nos canais de cor compatível com decodificador VAE de difusão")
+        elif metrics.get('anomalous_peaks', 0) >= 3:
+            key_findings.append("Picos harmônicos espectrais detectados na transformada de Fourier")
+
+    if 'statistical' in analyses:
+        stat = analyses['statistical']
+        metrics = stat.get('details', {}).get('metrics', {})
+        benford_corr = metrics.get('benford_correlation', 1.0)
+        if benford_corr > 0.98:
+            key_findings.append("Gradientes aderem à Lei de Benford natural de superfícies físicas")
+        if metrics.get('sat_p90', 0) > 0.85 and metrics.get('sat_mean', 0) > 0.55:
+            key_findings.append("Perfil de saturação cromática hiper-contrastado comum em geradores modernos")
 
     if 'artifacts' in analyses:
         art = analyses['artifacts']
-        cb = art.get('details', {}).get('metrics', {}).get('checkerboard_score', 0)
-        if cb > 0.1:
-            key_findings.append("Artefatos checkerboard detectados (fingerprint de GAN)")
+        metrics = art.get('details', {}).get('metrics', {})
+        if metrics.get('edge_sharpness_cv', 0.5) > 0.62:
+            key_findings.append("Gradiente de profundidade de campo óptico (bokeh/foco natural)")
 
     if confidence == 'high':
-        summary_parts.append("Os analisadores estão em forte concordância.")
+        summary_parts.append("Os analisadores forenses estão em forte concordância técnica.")
     elif confidence == 'low':
-        summary_parts.append("Os analisadores divergem significativamente — resultado deve ser interpretado com cautela.")
+        summary_parts.append("Houve dispersão entre os analisadores — avalie os detalhes métricos individuais.")
 
     return {
         'text': ' '.join(summary_parts),
         'key_findings': key_findings[:5]
     }
-
-
-import numpy as np  # needed for concordance calculation
 
 
 @app.route('/')
@@ -175,7 +213,7 @@ def index():
 def health():
     return jsonify({
         'status': 'ok',
-        'version': '1.0.0-mvp',
+        'version': '2.0.0-calibrated',
         'analyzers': ['metadata', 'ela', 'spectral', 'noise', 'statistical', 'artifacts']
     })
 
@@ -198,48 +236,46 @@ def analyze():
             'error': f'Formato não suportado. Use: {", ".join(sorted(ALLOWED_EXTENSIONS))}'
         }), 400
 
+    original_path = None
     try:
-        # Save temporarily for analysis
-        temp_path = os.path.join(UPLOAD_FOLDER, 'temp_analysis.png')
+        # Determine extension and unique temp filename
+        ext = os.path.splitext(file.filename)[1].lower() if '.' in file.filename else '.png'
+        temp_name = f"upload_{int(time.time() * 1000)}_{os.urandom(4).hex()}{ext}"
+        original_path = os.path.join(UPLOAD_FOLDER, temp_name)
 
-        # Open with PIL to validate and get info
-        image = Image.open(file.stream)
-        image_format = image.format or 'Unknown'
-        image_size = image.size
-        image_mode = image.mode
-
-        # Save as PNG for consistent analysis
-        image.save(temp_path, 'PNG')
-
-        # Also save original for metadata analysis (preserve original format)
-        file.stream.seek(0)
-        ext = os.path.splitext(file.filename)[1] if '.' in file.filename else '.png'
-        original_path = os.path.join(UPLOAD_FOLDER, f'temp_original{ext}')
+        # Save original intact file (preserves compression, EXIF, and native structure)
         file.save(original_path)
-
-        # Get file size
         file_size = os.path.getsize(original_path)
 
-        # Run all analyzers
-        analyses = {}
+        # Validate with PIL and extract fundamental format info
+        with Image.open(original_path) as img:
+            image_format = img.format or 'Unknown'
+            image_size = img.size
+            image_mode = img.mode
 
+        # Run all analyzers on the authentic source file
+        analyses = {}
         analyzer_configs = [
             ('metadata', analyze_metadata, original_path),
-            ('ela', analyze_ela, temp_path),
-            ('spectral', analyze_spectral, temp_path),
-            ('noise', analyze_noise, temp_path),
-            ('statistical', analyze_statistical, temp_path),
-            ('artifacts', analyze_artifacts, temp_path),
+            ('ela', analyze_ela, original_path),
+            ('spectral', analyze_spectral, original_path),
+            ('noise', analyze_noise, original_path),
+            ('statistical', analyze_statistical, original_path),
+            ('artifacts', analyze_artifacts, original_path),
         ]
 
         for key, func, path in analyzer_configs:
             try:
                 analyses[key] = func(path)
             except Exception as e:
-                analyses[key] = {'score': 50, 'details': {}, 'findings': [f'Erro na análise: {str(e)}']}
+                analyses[key] = {
+                    'score': 50,
+                    'details': {'metrics': {}},
+                    'findings': [f'Erro na análise: {str(e)}']
+                }
                 traceback.print_exc()
 
-        # Calculate composite score
+        # Calculate composite score with dynamic weighting
         score = calculate_composite_score(analyses)
         verdict, verdict_level = get_verdict(score)
 
@@ -251,14 +287,6 @@ def analyze():
 
         # Processing time
         elapsed = round(time.time() - start_time, 2)
-
-        # Clean up temp files
-        for p in [temp_path, original_path]:
-            try:
-                if os.path.exists(p):
-                    os.remove(p)
-            except Exception:
-                pass
 
         return jsonify({
             'success': True,
@@ -282,6 +310,14 @@ def analyze():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': f'Erro ao processar imagem: {str(e)}'}), 500
+
+    finally:
+        # Clean up temporary uploaded file safely
+        if original_path and os.path.exists(original_path):
+            try:
+                os.remove(original_path)
+            except Exception:
+                pass
 
 
 if __name__ == '__main__':
