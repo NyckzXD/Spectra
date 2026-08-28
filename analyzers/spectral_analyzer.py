@@ -21,124 +21,158 @@ def vectorized_viridis(normalized):
 
 def analyze_spectral(image_path: str) -> dict:
     """
-    Analyzes frequency spectrum of the image using FFT.
-    Detects GAN upsampling artifacts, anomalous spectral peaks, and radial symmetry.
+    Analyzes the 2D Fourier frequency spectrum of the image.
+    Evaluates:
+    - Natural optical image power-law decay: Amplitude A(f) ~ 1 / f^alpha (alpha ~ 1.0)
+    - Goodness of fit (R^2) of the 1/f falloff curve
+    - High-frequency spectral flatness and residual noise floor
+    - Anomalous 2D harmonic peaks (GAN/Diffusion upsampling fingerprints)
+    - Azimuthal directional symmetry vs natural scene orientation
     Returns: {'score': int, 'details': {'metrics': {...}}, 'visualization': 'base64string'}
     """
     try:
-        img = Image.open(image_path).convert('L')
-        arr = np.array(img, dtype=np.float64)
+        img_rgb = Image.open(image_path).convert('RGB')
+        arr_rgb = np.array(img_rgb, dtype=np.float64)
+        h, w, _ = arr_rgb.shape
 
-        # --- FFT ---
-        f = np.fft.fft2(arr)
+        # Downsample if image is overly large while preserving spectral structure
+        if max(h, w) > 1536:
+            scale = 1536 / max(h, w)
+            img_rgb = img_rgb.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
+            arr_rgb = np.array(img_rgb, dtype=np.float64)
+            h, w, _ = arr_rgb.shape
+
+        # Grayscale luminance
+        gray = 0.299 * arr_rgb[:, :, 0] + 0.587 * arr_rgb[:, :, 1] + 0.114 * arr_rgb[:, :, 2]
+
+        # Apply Hanning window to reduce edge boundary leakage in FFT
+        han_y = np.hanning(h)
+        han_x = np.hanning(w)
+        window = np.outer(han_y, han_x)
+        windowed_gray = (gray - np.mean(gray)) * window
+
+        # --- 1. 2D FFT & Linear Amplitude Spectrum ---
+        f = np.fft.fft2(windowed_gray)
         fshift = np.fft.fftshift(f)
-        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
+        amp = np.abs(fshift)  # Linear amplitude
 
-        # --- Radial profile ---
-        h, w = arr.shape
+        # Radial profile calculation on linear amplitude
         cy, cx = h // 2, w // 2
-        y, x = np.ogrid[0:h, 0:w]
-        r = np.hypot(x - cx, y - cy).astype(int)
+        y_grid, x_grid = np.ogrid[0:h, 0:w]
+        r = np.hypot(x_grid - cx, y_grid - cy).astype(int)
 
         max_r = min(cy, cx)
-        tbin = np.bincount(r.ravel(), magnitude_spectrum.ravel())
+        if max_r < 16:
+            max_r = 16
+
+        tbin = np.bincount(r.ravel(), amp.ravel())
         nr = np.bincount(r.ravel())
-        radialprofile = tbin / np.maximum(nr, 1)
+        radial_amp = tbin / np.maximum(nr, 1)
+        radial_amp = radial_amp[:max_r]
 
-        # Trim to meaningful range
-        radialprofile = radialprofile[:max_r]
+        # --- 2. Spectral Slope (Alpha) via Single-Log Linear Regression ---
+        # Natural optical images follow A(f) ~ 1/f^alpha, so ln(A) = -alpha * ln(f) + C
+        # Alpha is typically between 0.85 and 1.35 for authentic photography.
+        valid_len = len(radial_amp)
+        if valid_len > 12:
+            # Frequency indices (avoid DC 0..3 and Nyquist boundary near max_r)
+            f_start = 3
+            f_end = int(max_r * 0.85)
+            f_range = np.arange(f_start, f_end)
 
-        # --- Spectral slope (beta) via linear regression in log-log space ---
-        valid_len = len(radialprofile)
-        if valid_len > 10:
-            x_log = np.log(np.arange(1, valid_len) + 1)
-            y_log = np.log(radialprofile[1:] + 1)
+            freq_vals = f_range.astype(np.float64)
+            amp_vals = radial_amp[f_start:f_end] + 1e-6
 
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_log, y_log)
-            beta = -slope
-            r_squared = r_value ** 2
-        else:
-            beta = 2.0
-            r_squared = 0.0
-            intercept = 0.0
-            slope = 0.0
-            x_log = np.array([])
-            y_log = np.array([])
+            log_f = np.log(freq_vals)
+            log_amp = np.log(amp_vals)
 
-        # --- Anomalous peaks detection ---
-        # Peaks that deviate significantly from the power-law fit
-        peaks = 0
-        peak_strength = 0.0
-        if len(x_log) > 0 and len(y_log) > 0:
-            expected_y = intercept + slope * x_log
-            residuals = y_log - expected_y
-            std_res = np.std(residuals)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(log_f, log_amp)
+            alpha = float(-slope)
+            r_squared = float(r_value ** 2)
+
+            # --- 3. Anomalous Periodic Spikes Detection ---
+            # Measure deviations from the power-law fit
+            expected_log_amp = intercept + slope * log_f
+            residuals = log_amp - expected_log_amp
+            std_res = float(np.std(residuals))
 
             if std_res > 0:
-                peak_mask = residuals > 2.0 * std_res
-                peaks = int(np.sum(peak_mask))
-                if peaks > 0:
-                    peak_strength = float(np.mean(residuals[peak_mask] / std_res))
+                # Spikes are points significantly above the power-law regression
+                peak_mask = residuals > 2.2 * std_res
+                anomalous_peaks = int(np.sum(peak_mask))
+                peak_strength = float(np.mean(residuals[peak_mask] / std_res)) if anomalous_peaks > 0 else 0.0
+            else:
+                anomalous_peaks = 0
+                peak_strength = 0.0
+        else:
+            alpha = 1.0
+            r_squared = 0.98
+            anomalous_peaks = 0
+            peak_strength = 0.0
 
-        # --- Spectral entropy ---
-        norm_mag = magnitude_spectrum / (np.sum(magnitude_spectrum) + 1e-10)
-        spectral_entropy = float(-np.sum(norm_mag * np.log2(norm_mag + 1e-10)))
+        # --- 4. High-Frequency Spectral Flatness (Noise Floor Analysis) ---
+        # AI diffusion images often exhibit an unnaturally flat, elevated high-frequency tail
+        hf_start = int(max_r * 0.5)
+        hf_end = int(max_r * 0.9)
+        if hf_end > hf_start + 4:
+            hf_band = radial_amp[hf_start:hf_end] + 1e-6
+            # Spectral flatness = geometric mean / arithmetic mean (1.0 = pure white noise, 0.0 = tonal)
+            geom_mean = float(np.exp(np.mean(np.log(hf_band))))
+            arith_mean = float(np.mean(hf_band))
+            hf_flatness = float(geom_mean / (arith_mean + 1e-6))
+        else:
+            hf_flatness = 0.5
 
-        # --- Radial symmetry analysis ---
-        # GANs tend to produce more radially symmetric spectra
-        # Compute variance along angular direction for different radii
-        angles = np.arctan2(y - cy, x - cx)
-        radial_symmetry_scores = []
-        for radius in [max_r // 4, max_r // 2, 3 * max_r // 4]:
-            ring_mask = (r >= radius - 2) & (r <= radius + 2)
-            ring_values = magnitude_spectrum[ring_mask]
-            if len(ring_values) > 10:
-                cv = np.std(ring_values) / (np.mean(ring_values) + 1e-6)
-                radial_symmetry_scores.append(float(cv))
-
-        avg_radial_cv = float(np.mean(radial_symmetry_scores)) if radial_symmetry_scores else 0.5
-
-        # --- High frequency energy ratio ---
-        # AI images often have less high-frequency content
+        # --- 5. High-Frequency Energy Ratio (Luminance HF vs LF) ---
         mid_r = max_r // 2
-        low_freq_mask = r <= mid_r
-        high_freq_mask = r > mid_r
+        hf_mask = (r > mid_r) & (r <= max_r)
+        lf_mask = (r > 3) & (r <= mid_r)
 
-        low_energy = np.mean(magnitude_spectrum[low_freq_mask])
-        high_energy = np.mean(magnitude_spectrum[high_freq_mask])
-        hf_ratio = high_energy / (low_energy + 1e-6)
+        hf_energy = np.mean(amp[hf_mask]) + 1e-6
+        lf_energy = np.mean(amp[lf_mask]) + 1e-6
+        hf_lf_ratio = float(hf_energy / lf_energy)
 
-        # --- Scoring ---
-        score = 50
+        # --- 6. Calibrated Symmetrical Scoring Model ---
+        score = 50.0
 
-        # Beta: natural images ~1.5-2.5
-        if beta < 1.0 or beta > 3.0:
-            score += 18
-        elif 1.5 <= beta <= 2.5:
-            score -= 10
+        # Natural Power-Law Slope Alpha:
+        # Optical real photos: 0.85 <= alpha <= 1.30 with high R^2 (> 0.94)
+        if 0.85 <= alpha <= 1.30 and r_squared > 0.94:
+            score -= 20  # Strong natural optical 1/f falloff
+        elif 0.70 <= alpha <= 1.45 and r_squared > 0.90:
+            score -= 10  # Moderate natural falloff
+        elif alpha < 0.55 or alpha > 1.65:
+            score += 18  # Synthetic non-physical spectral decay
+        elif r_squared < 0.82:
+            score += 14  # Fragmented non-natural spectrum
 
-        # Anomalous peaks (GAN upsampling fingerprints)
-        if peaks > 5:
-            score += min(peaks * 3, 25)
-        elif peaks > 2:
-            score += peaks * 2
+        # High-Frequency Flatness (AI diffusion noise floor):
+        # AI images tend to have flatter high-frequency noise floor (> 0.80)
+        # Natural optical falloff has lower flatness (< 0.65)
+        if hf_flatness > 0.85:
+            score += 14  # Flat synthetic noise floor (diffusion signature)
+        elif hf_flatness < 0.60:
+            score -= 10  # Natural smooth optical attenuation
 
-        # Low radial CV = high symmetry = more likely AI
-        if avg_radial_cv < 0.15:
-            score += 12
-        elif avg_radial_cv > 0.4:
-            score -= 8
+        # Anomalous Harmonic Spikes (GAN / Upscaler periodic fingerprints):
+        if anomalous_peaks >= 4:
+            score += min(anomalous_peaks * 4, 20)
+        elif anomalous_peaks == 0:
+            score -= 6   # Clean continuous natural spectrum
 
-        # Low high-frequency ratio → AI (often smoother)
-        if hf_ratio < 0.3:
-            score += 10
-        elif hf_ratio > 0.6:
-            score -= 8
+        # Extreme High-to-Low frequency energy ratios:
+        if hf_lf_ratio < 0.005:
+            score += 10  # Overly blurred/smoothed synthetic image
+        elif 0.015 <= hf_lf_ratio <= 0.15:
+            score -= 6   # Natural balance of photographic detail
 
-        # --- Visualization (fully vectorized) ---
-        mag_min = magnitude_spectrum.min()
-        mag_max = magnitude_spectrum.max()
-        mag_norm = (magnitude_spectrum - mag_min) / (mag_max - mag_min + 1e-6)
+        final_score = int(round(min(max(score, 0), 100)))
+
+        # --- Visualization: 2D Log-Magnitude Spectrum ---
+        log_mag_vis = 20 * np.log(amp + 1)
+        mag_min = log_mag_vis.min()
+        mag_max = log_mag_vis.max()
+        mag_norm = (log_mag_vis - mag_min) / (mag_max - mag_min + 1e-6)
 
         r_ch, g_ch, b_ch = vectorized_viridis(mag_norm)
         color_spec = np.stack([
@@ -153,16 +187,15 @@ def analyze_spectral(image_path: str) -> dict:
         img_str = base64.b64encode(buffered.getvalue()).decode()
 
         return {
-            'score': min(max(int(score), 0), 100),
+            'score': final_score,
             'details': {
                 'metrics': {
-                    'spectral_slope_beta': round(float(beta), 4),
-                    'r_squared': round(float(r_squared), 4),
-                    'anomalous_peaks': int(peaks),
+                    'spectral_slope_alpha': round(alpha, 4),
+                    'power_law_fit_r2': round(r_squared, 4),
+                    'hf_spectral_flatness': round(hf_flatness, 4),
+                    'hf_lf_energy_ratio': round(hf_lf_ratio, 4),
+                    'anomalous_peaks': anomalous_peaks,
                     'peak_strength': round(peak_strength, 2),
-                    'spectral_entropy': round(spectral_entropy, 3),
-                    'radial_symmetry_cv': round(avg_radial_cv, 4),
-                    'hf_energy_ratio': round(float(hf_ratio), 4),
                 }
             },
             'visualization': img_str
@@ -171,6 +204,6 @@ def analyze_spectral(image_path: str) -> dict:
     except Exception as e:
         return {
             'score': 50,
-            'details': {'metrics': {}},
+            'details': {'metrics': {}, 'error': str(e)},
             'visualization': ''
         }

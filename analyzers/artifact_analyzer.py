@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy import ndimage
 from PIL import Image
@@ -5,8 +6,12 @@ from PIL import Image
 
 def analyze_artifacts(image_path: str) -> dict:
     """
-    Analyzes visual artifacts, edges, textures, and structural patterns.
-    Detects JPEG grid misalignment, checkerboard artifacts (GAN), and edge sharpness distribution.
+    Analyzes physical optical artifacts, depth of field gradients, edges, and latent patch boundaries.
+    Features evaluated:
+    - Optical depth of field & edge sharpness variance (physical lens focus vs synthetic sharpness)
+    - Sobel edge orientation coherence & entropy
+    - Authentic JPEG 8x8 DCT grid boundary detection (when applicable)
+    - Texture variance across spatial blocks
     Returns: {'score': int, 'details': {'metrics': {...}}}
     """
     try:
@@ -14,52 +19,52 @@ def analyze_artifacts(image_path: str) -> dict:
         arr = np.array(img, dtype=np.float32)
         h, w = arr.shape
 
+        if max(h, w) > 1536:
+            scale = 1536 / max(h, w)
+            img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
+            arr = np.array(img, dtype=np.float32)
+            h, w = arr.shape
+
         metrics = {}
 
-        # --- Sobel Edge Detection ---
+        # --- 1. Edge Detection & Sharpness Distribution (Optical Bokeh / DoF) ---
         dx = ndimage.sobel(arr, axis=1)
         dy = ndimage.sobel(arr, axis=0)
         mag = np.hypot(dx, dy)
 
         edge_threshold = np.percentile(mag, 85)
         strong_edges = mag > edge_threshold
-        edge_density = float(np.mean(strong_edges))
-        metrics['edge_density'] = round(edge_density, 6)
-
-        # --- Edge orientation coherence ---
-        orientations = np.arctan2(dy, dx)
-        strong_orientations = orientations[strong_edges]
-
-        if len(strong_orientations) > 0:
-            hist, _ = np.histogram(strong_orientations, bins=36, range=(-np.pi, np.pi))
-            hist_norm = hist / np.sum(hist)
-            coherence = float(np.var(hist_norm))
-
-            # Edge orientation entropy
-            hist_pos = hist_norm[hist_norm > 0]
-            edge_orientation_entropy = float(-np.sum(hist_pos * np.log2(hist_pos)))
-        else:
-            coherence = 0.0
-            edge_orientation_entropy = 0.0
-
-        metrics['edge_coherence'] = round(coherence, 6)
-        metrics['edge_orientation_entropy'] = round(edge_orientation_entropy, 4)
-
-        # --- Edge sharpness distribution ---
-        # GANs often produce edges with unnaturally uniform sharpness
         edge_magnitudes = mag[strong_edges]
+
         if len(edge_magnitudes) > 100:
             edge_cv = float(np.std(edge_magnitudes) / (np.mean(edge_magnitudes) + 1e-6))
             edge_skew = float(np.mean((edge_magnitudes - np.mean(edge_magnitudes)) ** 3) /
                               (np.std(edge_magnitudes) ** 3 + 1e-6))
         else:
-            edge_cv = 0.5
-            edge_skew = 0.0
+            edge_cv = 0.55
+            edge_skew = 0.5
 
         metrics['edge_sharpness_cv'] = round(edge_cv, 4)
         metrics['edge_sharpness_skew'] = round(edge_skew, 4)
 
-        # --- Block texture variance (4x4 grid) ---
+        # --- 2. Edge Orientation Entropy ---
+        orientations = np.arctan2(dy, dx)
+        strong_orientations = orientations[strong_edges]
+
+        if len(strong_orientations) > 100:
+            hist, _ = np.histogram(strong_orientations, bins=36, range=(-np.pi, np.pi))
+            hist_norm = hist / np.sum(hist)
+            hist_pos = hist_norm[hist_norm > 0]
+            edge_orientation_entropy = float(-np.sum(hist_pos * np.log2(hist_pos)))
+            orientation_coherence = float(np.var(hist_norm))
+        else:
+            edge_orientation_entropy = 4.5
+            orientation_coherence = 0.001
+
+        metrics['edge_orientation_entropy'] = round(edge_orientation_entropy, 4)
+        metrics['orientation_coherence'] = round(orientation_coherence, 6)
+
+        # --- 3. Spatial Texture Variance (Depth & Multi-Layer Scene Complexity) ---
         block_h, block_w = max(h // 4, 1), max(w // 4, 1)
         block_contrasts = []
         for i in range(4):
@@ -73,122 +78,81 @@ def analyze_artifacts(image_path: str) -> dict:
                     block_contrasts.append(float(np.std(block)))
 
         contrast_var = float(np.var(block_contrasts)) if block_contrasts else 0.0
+        contrast_cv = float(np.std(block_contrasts) / (np.mean(block_contrasts) + 1e-6)) if block_contrasts else 0.0
         metrics['texture_variance'] = round(contrast_var, 2)
+        metrics['texture_cv'] = round(contrast_cv, 4)
 
-        # --- Laplacian variance (focus/blur indicator) ---
-        lap = ndimage.laplace(arr)
-        lap_var = float(np.var(lap))
-        metrics['laplacian_variance'] = round(lap_var, 2)
+        # --- 4. JPEG 8x8 Grid Boundary Ratio (Only meaningful for original JPEGs) ---
+        is_jpeg = False
+        ext = os.path.splitext(image_path)[1].lower()
+        if ext in ['.jpg', '.jpeg']:
+            is_jpeg = True
 
-        # --- JPEG grid alignment detection ---
-        # Real JPEG images have compression artifacts aligned to 8x8 blocks
-        # AI-generated images (even saved as JPEG) may not have this alignment
-        jpeg_grid_score = 0.0
-        if h >= 16 and w >= 16:
-            # Compute average absolute difference at 8-pixel boundaries vs. non-boundaries
-            # Horizontal boundaries
-            boundary_diffs_h = []
-            non_boundary_diffs_h = []
+        jpeg_grid_ratio = 1.0
+        if is_jpeg and h >= 32 and w >= 32:
+            boundary_diffs = []
+            non_boundary_diffs = []
+
             for col in range(1, w):
-                diff = float(np.mean(np.abs(arr[:, col].astype(np.float64) -
-                                            arr[:, col - 1].astype(np.float64))))
+                diff = float(np.mean(np.abs(arr[:, col] - arr[:, col - 1])))
                 if col % 8 == 0:
-                    boundary_diffs_h.append(diff)
+                    boundary_diffs.append(diff)
                 else:
-                    non_boundary_diffs_h.append(diff)
+                    non_boundary_diffs.append(diff)
 
-            # Vertical boundaries
-            boundary_diffs_v = []
-            non_boundary_diffs_v = []
             for row in range(1, h):
-                diff = float(np.mean(np.abs(arr[row, :].astype(np.float64) -
-                                            arr[row - 1, :].astype(np.float64))))
+                diff = float(np.mean(np.abs(arr[row, :] - arr[row - 1, :])))
                 if row % 8 == 0:
-                    boundary_diffs_v.append(diff)
+                    boundary_diffs.append(diff)
                 else:
-                    non_boundary_diffs_v.append(diff)
+                    non_boundary_diffs.append(diff)
 
-            avg_boundary = np.mean(boundary_diffs_h + boundary_diffs_v) if (boundary_diffs_h + boundary_diffs_v) else 0
-            avg_non_boundary = np.mean(non_boundary_diffs_h + non_boundary_diffs_v) if (non_boundary_diffs_h + non_boundary_diffs_v) else 0
+            avg_b = np.mean(boundary_diffs) if boundary_diffs else 0
+            avg_nb = np.mean(non_boundary_diffs) if non_boundary_diffs else 0
 
-            if avg_non_boundary > 0:
-                jpeg_grid_ratio = avg_boundary / avg_non_boundary
-                # Ratio > 1 suggests JPEG grid artifacts (real JPEG has stronger boundaries)
-                jpeg_grid_score = float(jpeg_grid_ratio)
-            else:
-                jpeg_grid_score = 1.0
+            if avg_nb > 0:
+                jpeg_grid_ratio = float(avg_b / avg_nb)
 
-        metrics['jpeg_grid_ratio'] = round(jpeg_grid_score, 4)
+        metrics['jpeg_grid_ratio'] = round(jpeg_grid_ratio, 4)
+        metrics['is_jpeg_source'] = is_jpeg
 
-        # --- Checkerboard artifact detection (GAN upsampling fingerprint) ---
-        # GANs using transposed convolutions produce checkerboard patterns
-        # Detect by analyzing 2x2 pixel patterns
-        checkerboard_score = 0.0
-        if h >= 8 and w >= 8:
-            # Compute differences in a 2x2 checkerboard pattern
-            even_even = arr[0::2, 0::2]
-            even_odd = arr[0::2, 1::2]
-            odd_even = arr[1::2, 0::2]
-            odd_odd = arr[1::2, 1::2]
+        # --- 5. Symmetrical Calibrated Scoring Model ---
+        score = 50.0
 
-            min_h = min(even_even.shape[0], even_odd.shape[0], odd_even.shape[0], odd_odd.shape[0])
-            min_w = min(even_even.shape[1], even_odd.shape[1], odd_even.shape[1], odd_odd.shape[1])
-
-            ee = even_even[:min_h, :min_w].astype(np.float64)
-            eo = even_odd[:min_h, :min_w].astype(np.float64)
-            oe = odd_even[:min_h, :min_w].astype(np.float64)
-            oo = odd_odd[:min_h, :min_w].astype(np.float64)
-
-            # Checkerboard = diagonal pairs more similar than adjacent pairs
-            diag_diff = np.mean(np.abs(ee - oo) + np.abs(eo - oe))
-            adj_diff = np.mean(np.abs(ee - eo) + np.abs(ee - oe))
-
-            if adj_diff > 0:
-                checkerboard_ratio = diag_diff / adj_diff
-                # If ratio is very different from 1.0, checkerboard pattern present
-                checkerboard_score = float(abs(1.0 - checkerboard_ratio))
-
-        metrics['checkerboard_score'] = round(checkerboard_score, 4)
-
-        # --- Scoring ---
-        score = 50
-
-        # Low texture variance → AI (uniform texture)
-        if contrast_var < 100:
-            score += 15
-        elif contrast_var > 500:
-            score -= 12
-
-        # High edge coherence (biased orientations) → AI
-        if coherence > 0.005:
-            score += 12
-        elif coherence < 0.001:
-            score -= 5
-
-        # Low edge sharpness CV → AI (unnaturally uniform sharpness)
-        if edge_cv < 0.4:
-            score += 10
-        elif edge_cv > 0.8:
+        # Optical Depth of Field (Edge CV): Real optical cameras have high edge sharpness variance
+        # due to focal plane and bokeh (edge_cv > 0.60). AI images often render uniform sharpness (edge_cv < 0.42).
+        if edge_cv > 0.65:
+            score -= 16  # Authentic optical lens depth-of-field
+        elif edge_cv > 0.52:
             score -= 8
+        elif edge_cv < 0.38:
+            score += 16  # Unnatural uniform synthetic edge sharpness
+        elif edge_cv < 0.46:
+            score += 8
 
-        # Low laplacian variance → blurry/smooth → AI tendency
-        if lap_var < 50:
-            score += 12
-        elif lap_var > 200:
-            score -= 8
+        # Spatial Texture Complexity
+        if contrast_cv > 0.45:
+            score -= 10  # Natural depth and multi-object layering
+        elif contrast_cv < 0.18:
+            score += 12  # Synthetic flat scene composition
 
-        # JPEG grid: ratio near 1.0 = no JPEG grid = likely not from camera JPEG
-        if 0.95 <= jpeg_grid_score <= 1.05:
-            score += 8  # No JPEG artifacts → more likely AI
-        elif jpeg_grid_score > 1.15:
-            score -= 10  # Strong JPEG grid → real JPEG from camera
+        # Edge Orientation Entropy: Natural photos have rich multi-angle orientations
+        if edge_orientation_entropy > 4.8:
+            score -= 8   # Rich natural geometric diversity
+        elif edge_orientation_entropy < 4.0:
+            score += 10  # Biased AI diffusion brush/directionality
 
-        # Checkerboard artifacts
-        if checkerboard_score > 0.1:
-            score += min(int(checkerboard_score * 30), 20)
+        # JPEG Grid: Authentic camera JPEG compression blocks
+        if is_jpeg:
+            if jpeg_grid_ratio > 1.08:
+                score -= 12  # Clear authentic hardware JPEG compression grid
+            elif jpeg_grid_ratio < 0.98:
+                score += 8   # JPEG file without authentic DCT grid
+
+        final_score = int(round(min(max(score, 0), 100)))
 
         return {
-            'score': min(max(int(score), 0), 100),
+            'score': final_score,
             'details': {
                 'metrics': metrics
             }
@@ -197,5 +161,5 @@ def analyze_artifacts(image_path: str) -> dict:
     except Exception as e:
         return {
             'score': 50,
-            'details': {'metrics': {}}
+            'details': {'metrics': {}, 'error': str(e)}
         }
