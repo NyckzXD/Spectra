@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keyFindingsSection.classList.remove('hidden');
         keyFindingsList.innerHTML = '';
 
-        const icons = ['🔍', '📋', '📡', '🔬', '⚡'];
+        const icons = ['', '', '', '', ''];
         findings.forEach((finding, i) => {
             const chip = document.createElement('div');
             chip.className = 'finding-chip';
@@ -428,12 +428,12 @@ document.addEventListener('DOMContentLoaded', () => {
         analysisGrid.innerHTML = '';
 
         const cardDefs = [
-            { key: 'metadata',    icon: '📋', title: 'Análise de Metadados',       desc: 'EXIF, C2PA, assinaturas de IA' },
-            { key: 'ela',         icon: '🔍', title: 'Error Level Analysis',       desc: 'Compressão JPEG e uniformidade' },
-            { key: 'spectral',    icon: '📡', title: 'Análise Espectral (FFT)',     desc: 'Domínio de frequência e picos' },
-            { key: 'noise',       icon: '📊', title: 'Análise de Ruído',           desc: 'Padrões de ruído e PRNU' },
-            { key: 'statistical', icon: '📈', title: 'Análise Estatística',        desc: 'Benford, GLCM, entropia' },
-            { key: 'artifacts',   icon: '🔬', title: 'Análise de Artefatos',       desc: 'JPEG grid, checkerboard, edges' }
+            { key: 'metadata', icon: '', title: 'Análise de Metadados', desc: 'EXIF, C2PA, assinaturas de IA' },
+            { key: 'ela', icon: '', title: 'Error Level Analysis', desc: 'Compressão JPEG e uniformidade' },
+            { key: 'spectral', icon: '', title: 'Análise Espectral (FFT)', desc: 'Domínio de frequência e picos' },
+            { key: 'noise', icon: '', title: 'Análise de Ruído', desc: 'Padrões de ruído e PRNU' },
+            { key: 'statistical', icon: '', title: 'Análise Estatística', desc: 'Benford, GLCM, entropia' },
+            { key: 'artifacts', icon: '', title: 'Análise de Artefatos', desc: 'JPEG grid, checkerboard, edges' }
         ];
 
         cardDefs.forEach((def, index) => {
