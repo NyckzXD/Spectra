@@ -240,10 +240,10 @@ body {
 /* --- Upload Card (Right) --- */
 .upload-card {
     background: var(--bg-white);
-    border-radius: var(--radius-lg);
-    border: 2px solid var(--accent);
+    border-radius: 20px;
+    border: 2px dashed var(--accent);
     padding: 0;
-    min-height: 440px;
+    min-height: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -251,17 +251,17 @@ body {
     cursor: pointer;
     position: relative;
     transition: all var(--transition-normal);
-    box-shadow: var(--shadow-lg);
 }
 
 .upload-card:hover {
-    box-shadow: var(--shadow-xl), 0 0 0 4px rgba(89, 165, 216, 0.1);
+    border-color: var(--accent-hover);
+    background: #FAFDFE;
 }
 
 .upload-card.dragover {
     border-color: var(--accent-hover);
     background: var(--accent-soft);
-    box-shadow: var(--shadow-xl), 0 0 0 6px rgba(89, 165, 216, 0.15);
+    box-shadow: 0 0 0 6px rgba(89, 165, 216, 0.15);
 }
 
 .upload-card-content {
@@ -274,18 +274,19 @@ body {
 }
 
 .upload-icon-wrapper {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
     background: var(--accent-soft);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: transform var(--transition-spring);
+    margin-bottom: 4px;
 }
 
 .upload-card:hover .upload-icon-wrapper {
-    transform: scale(1.08);
+    transform: translateY(-2px) scale(1.05);
 }
 
 .upload-title {
