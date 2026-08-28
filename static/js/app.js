@@ -1,122 +1,227 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM References ---
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const browseBtn = document.getElementById('browseBtn');
-    
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
     const uploadSection = document.getElementById('uploadSection');
     const loadingSection = document.getElementById('loadingSection');
     const resultsSection = document.getElementById('resultsSection');
     const errorSection = document.getElementById('errorSection');
-    
+
+    const uploadPreview = document.getElementById('uploadPreview');
+    const uploadPreviewImg = document.getElementById('uploadPreviewImg');
+    const previewBg = document.getElementById('previewBg');
+    const previewFileName = document.getElementById('previewFileName');
+    const previewFileSize = document.getElementById('previewFileSize');
+
     const imagePreview = document.getElementById('imagePreview');
     const imageInfo = document.getElementById('imageInfo');
     const verdictBanner = document.getElementById('verdictBanner');
+    const verdictSummary = document.getElementById('verdictSummary');
+    const confidenceBadge = document.getElementById('confidenceBadge');
+    const confidenceText = document.getElementById('confidenceText');
+    const keyFindingsList = document.getElementById('keyFindingsList');
+    const keyFindingsSection = document.getElementById('keyFindingsSection');
     const analysisGrid = document.getElementById('analysisGrid');
-    
-    const resetBtn = document.getElementById('resetBtn');
-    
-    // UI Events
-    browseBtn.addEventListener('click', () => fileInput.click());
-    
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            resultsSection.classList.add('hidden');
-            if (errorSection) errorSection.classList.add('hidden');
-            uploadSection.classList.remove('hidden');
-            fileInput.value = '';
-        });
-    }
-    
-    // Retry button inside error section
-    let retryBtn;
-    if (errorSection) {
-        retryBtn = document.createElement('button');
-        retryBtn.textContent = 'Retry';
-        retryBtn.className = 'primary-btn';
-        retryBtn.style.marginTop = '1rem';
-        retryBtn.addEventListener('click', () => {
-            errorSection.classList.add('hidden');
-            uploadSection.classList.remove('hidden');
-            fileInput.value = '';
-        });
-        errorSection.querySelector('.error-content').appendChild(retryBtn);
+    const processingTime = document.getElementById('processingTime');
+    const errorMessage = document.getElementById('errorMessage');
+
+    let selectedFile = null;
+
+    // --- Utility Functions ---
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
     }
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
-    
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
-    
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            handleFile(e.dataTransfer.files[0]);
+    function showSection(section) {
+        [uploadSection, loadingSection, resultsSection, errorSection].forEach(s => {
+            s.classList.add('hidden');
+        });
+        section.classList.remove('hidden');
+    }
+
+    function getColorForScore(score) {
+        if (score <= 25) return '#10b981';
+        if (score <= 50) return '#fbbf24';
+        if (score <= 75) return '#f97316';
+        return '#ef4444';
+    }
+
+    // --- File Selection & Preview ---
+    function showPreview(file) {
+        selectedFile = file;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            uploadPreviewImg.src = e.target.result;
+            previewBg.style.backgroundImage = `url(${e.target.result})`;
+            imagePreview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        previewFileName.textContent = file.name;
+        previewFileSize.textContent = formatFileSize(file.size);
+
+        // Switch from upload content to preview
+        dropZone.querySelector('.drop-zone-content').classList.add('hidden');
+        uploadPreview.classList.remove('hidden');
+    }
+
+    function resetUpload() {
+        selectedFile = null;
+        fileInput.value = '';
+        dropZone.querySelector('.drop-zone-content').classList.remove('hidden');
+        uploadPreview.classList.add('hidden');
+        uploadPreviewImg.src = '';
+        previewBg.style.backgroundImage = '';
+    }
+
+    function handleFile(file) {
+        if (!file || !file.type.match('image.*')) {
+            showError('Selecione um arquivo de imagem válido (JPEG, PNG, WebP, BMP, TIFF).');
+            return;
         }
+
+        if (file.size > 16 * 1024 * 1024) {
+            showError('O arquivo excede o limite de 16 MB.');
+            return;
+        }
+
+        showPreview(file);
+    }
+
+    // --- Event Listeners ---
+    browseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
     });
-    
+
+    dropZone.addEventListener('click', (e) => {
+        if (e.target === browseBtn || e.target.closest('.primary-btn') || e.target.closest('.secondary-btn')) return;
+        if (!uploadPreview.classList.contains('hidden')) return;
+        fileInput.click();
+    });
+
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) {
             handleFile(e.target.files[0]);
         }
     });
 
-    function handleFile(file) {
-        if (!file.type.match('image.*')) {
-            showError('Please select a valid image file (JPEG, PNG, WebP).');
-            return;
+    // Drag & Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
         }
+    });
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+    // Clipboard paste (Ctrl+V)
+    document.addEventListener('paste', (e) => {
+        // Only handle if upload section is visible
+        if (uploadSection.classList.contains('hidden')) return;
 
-        analyzeImage(file);
-    }
+        const items = e.clipboardData?.items;
+        if (!items) return;
 
-    function showError(message) {
-        uploadSection.classList.add('hidden');
-        loadingSection.classList.add('hidden');
-        resultsSection.classList.add('hidden');
-        
-        if (errorSection) {
-            errorSection.classList.remove('hidden');
-            let msgEl = errorSection.querySelector('.error-message');
-            if (!msgEl) {
-                msgEl = document.createElement('p');
-                msgEl.className = 'error-message';
-                errorSection.querySelector('.error-content').insertBefore(msgEl, retryBtn);
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    handleFile(file);
+                    e.preventDefault();
+                    break;
+                }
             }
-            msgEl.textContent = message;
-        } else {
-            alert("Error: " + message);
         }
+    });
+
+    // Analyze button
+    analyzeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedFile) {
+            analyzeImage(selectedFile);
+        }
+    });
+
+    // Cancel preview
+    cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetUpload();
+    });
+
+    // Retry from error
+    retryBtn.addEventListener('click', () => {
+        showSection(uploadSection);
+        resetUpload();
+    });
+
+    // Reset from results
+    resetBtn.addEventListener('click', () => {
+        showSection(uploadSection);
+        resetUpload();
+    });
+
+    // --- Error Display ---
+    function showError(message) {
+        errorMessage.textContent = message;
+        showSection(errorSection);
     }
 
+    // --- Analysis ---
     async function analyzeImage(file) {
-        uploadSection.classList.add('hidden');
-        loadingSection.classList.remove('hidden');
-        resultsSection.classList.add('hidden');
-        if (errorSection) errorSection.classList.add('hidden');
+        showSection(loadingSection);
 
-        // Animate loading steps purely for visual effect while waiting
+        // Animate loading steps
         const steps = document.querySelectorAll('.progress-steps .step');
         let currentStep = 0;
+
+        steps.forEach(s => {
+            s.classList.remove('active', 'done');
+            s.querySelector('.step-icon').textContent = '◯';
+        });
+        steps[0].classList.add('active');
+
         const stepInterval = setInterval(() => {
-            steps.forEach(s => s.classList.remove('active'));
+            if (currentStep < steps.length) {
+                steps[currentStep].classList.remove('active');
+                steps[currentStep].classList.add('done');
+                steps[currentStep].querySelector('.step-icon').textContent = '';
+            }
+            currentStep++;
             if (currentStep < steps.length) {
                 steps[currentStep].classList.add('active');
-                currentStep++;
             } else {
+                // Loop back for long analyses
                 currentStep = 0;
+                steps.forEach(s => {
+                    s.classList.remove('active', 'done');
+                    s.querySelector('.step-icon').textContent = '◯';
+                });
+                steps[0].classList.add('active');
             }
-        }, 800);
+        }, 900);
 
         const formData = new FormData();
         formData.append('image', file);
@@ -127,249 +232,317 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
 
+            clearInterval(stepInterval);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Erro HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            clearInterval(stepInterval);
 
             if (data.success === false) {
-                showError(data.error || 'Analysis failed due to unknown server error.');
+                showError(data.error || 'A análise falhou por um erro desconhecido.');
                 return;
             }
-            
+
             renderResults(data);
-            
+
         } catch (error) {
-            console.error('Analysis failed:', error);
             clearInterval(stepInterval);
-            showError('Failed to connect to the analysis server. Please check your connection and try again.');
+            console.error('Analysis failed:', error);
+            showError(error.message || 'Falha ao conectar com o servidor de análise. Verifique sua conexão.');
         }
     }
 
-    function formatValue(value) {
-        if (typeof value === 'number') {
-            return Number.isInteger(value) ? value : value.toFixed(2);
-        }
-        if (Array.isArray(value)) {
-            return value.map(v => typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v).join(', ');
-        }
-        if (typeof value === 'object' && value !== null) {
-            return Object.entries(value).map(([k, v]) => `${k}: ${formatValue(v)}`).join(' | ');
-        }
-        return value;
-    }
-
-    function renderDetailsRecursive(obj, isTable = false) {
-        if (!obj || Object.keys(obj).length === 0) return '';
-        
-        let html = '';
-        if (isTable) {
-            html += '<table class="metadata-table"><tbody>';
-            for (const [k, v] of Object.entries(obj)) {
-                html += `<tr><td><strong>${k}</strong></td><td>${formatValue(v)}</td></tr>`;
-            }
-            html += '</tbody></table>';
-        } else {
-            html += '<ul class="details-list">';
-            for (const [k, v] of Object.entries(obj)) {
-                const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                html += `<li><strong>${formattedKey}:</strong> ${formatValue(v)}</li>`;
-            }
-            html += '</ul>';
-        }
-        return html;
-    }
-
+    // --- Results Rendering ---
     function renderResults(data) {
-        loadingSection.classList.add('hidden');
-        resultsSection.classList.remove('hidden');
-        if (resetBtn) resetBtn.classList.remove('hidden');
+        showSection(resultsSection);
 
-        // Render Image Info
-        if (data.image_info && imageInfo) {
-            const sizeStr = Array.isArray(data.image_info.size) ? data.image_info.size.join('x') : data.image_info.size;
-            const sizeKB = (data.image_info.file_size / 1024).toFixed(1) + ' KB';
-            imageInfo.innerHTML = `
-                <div class="info-item"><span>Filename:</span> ${data.image_info.filename}</div>
-                <div class="info-item"><span>Format:</span> ${data.image_info.format}</div>
-                <div class="info-item"><span>Dimensions:</span> ${sizeStr}</div>
-                <div class="info-item"><span>Size:</span> ${sizeKB}</div>
-            `;
+        renderImageInfo(data.image_info, data.processing_time);
+        drawScoreGauge(data.score);
+        renderVerdict(data.score, data.verdict, data.confidence, data.summary);
+        renderKeyFindings(data.summary?.key_findings);
+        renderAnalysisCards(data.analyses);
+
+        if (data.processing_time) {
+            processingTime.textContent = `Processado em ${data.processing_time}s`;
         }
 
-        drawScoreGauge(data.score);
-        renderVerdict(data.score, data.verdict);
-        renderAnalysisCards(data.analyses);
-        
-        // Smooth scroll to results after a brief delay
         setTimeout(() => {
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        }, 150);
     }
 
-    function getColorForScore(score) {
-        if (score <= 25) return '#10b981'; // Green (Authentic)
-        if (score <= 50) return '#fbbf24'; // Yellow (Inconclusive)
-        if (score <= 75) return '#f97316'; // Orange (Suspect)
-        return '#ef4444'; // Red (Likely AI)
+    function renderImageInfo(info, time) {
+        if (!info || !imageInfo) return;
+
+        const sizeStr = Array.isArray(info.size) ? info.size.join(' × ') : info.size;
+        const fileSizeStr = formatFileSize(info.file_size);
+
+        imageInfo.innerHTML = `
+            <div class="info-item"><span class="info-label">Arquivo</span><span class="info-value">${info.filename}</span></div>
+            <div class="info-item"><span class="info-label">Formato</span><span class="info-value">${info.format}</span></div>
+            <div class="info-item"><span class="info-label">Modo</span><span class="info-value">${info.mode || '—'}</span></div>
+            <div class="info-item"><span class="info-label">Dimensões</span><span class="info-value">${sizeStr} px</span></div>
+            <div class="info-item"><span class="info-label">Tamanho</span><span class="info-value">${fileSizeStr}</span></div>
+        `;
+    }
+
+    function renderVerdict(score, verdictText, confidence, summary) {
+        const color = getColorForScore(score);
+
+        verdictBanner.textContent = verdictText;
+        verdictBanner.style.color = color;
+
+        // Confidence badge
+        confidenceBadge.className = `confidence-badge ${confidence || 'medium'}`;
+        const confLabels = { high: 'Alta', medium: 'Média', low: 'Baixa' };
+        confidenceText.textContent = `Confiança: ${confLabels[confidence] || 'Média'}`;
+
+        // Summary text
+        if (summary?.text) {
+            verdictSummary.textContent = summary.text;
+            verdictSummary.style.display = '';
+        } else {
+            verdictSummary.style.display = 'none';
+        }
+
+        // Hero border glow
+        const verdictHero = document.getElementById('verdictHero');
+        verdictHero.style.borderColor = `${color}25`;
+        verdictHero.style.boxShadow = `0 16px 48px ${color}10, inset 0 1px 0 ${color}15`;
+    }
+
+    function renderKeyFindings(findings) {
+        if (!findings || findings.length === 0) {
+            keyFindingsSection.classList.add('hidden');
+            return;
+        }
+
+        keyFindingsSection.classList.remove('hidden');
+        keyFindingsList.innerHTML = '';
+
+        const icons = ['🔍', '📋', '📡', '🔬', '⚡'];
+        findings.forEach((finding, i) => {
+            const chip = document.createElement('div');
+            chip.className = 'finding-chip';
+            chip.innerHTML = `<span class="finding-icon">${icons[i % icons.length]}</span><span>${finding}</span>`;
+            keyFindingsList.appendChild(chip);
+        });
     }
 
     function drawScoreGauge(finalScore) {
         const canvas = document.getElementById('scoreGauge');
         const ctx = canvas.getContext('2d');
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = 80;
-        const lineWidth = 16;
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = 220 * dpr;
+        canvas.height = 220 * dpr;
+        canvas.style.width = '220px';
+        canvas.style.height = '220px';
+        ctx.scale(dpr, dpr);
+
+        const centerX = 110;
+        const centerY = 110;
+        const radius = 88;
+        const lineWidth = 14;
 
         let currentScore = 0;
-        const animationDuration = 2000;
+        const animationDuration = 2200;
         const startTime = performance.now();
 
         function animate(time) {
             const elapsed = time - startTime;
             const progress = Math.min(elapsed / animationDuration, 1);
-            
-            // Ease out cubic
             const easeOut = 1 - Math.pow(1 - progress, 3);
             currentScore = Math.round(easeOut * finalScore);
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, 220, 220);
 
-            // Draw background track
+            // Background track
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
             ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
             ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Draw progress arc
+            // Progress arc
             const startAngle = 0.75 * Math.PI;
             const endAngle = startAngle + (currentScore / 100) * (1.5 * Math.PI);
-            
             const color = getColorForScore(currentScore);
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, startAngle, endAngle);
             ctx.lineWidth = lineWidth;
             ctx.strokeStyle = color;
+            ctx.lineCap = 'round';
             ctx.stroke();
 
-            // Draw text
+            // Glow effect
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.lineWidth = lineWidth + 6;
+            ctx.strokeStyle = color + '15';
+            ctx.stroke();
+
+            // Score text
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 42px Inter';
+            ctx.font = `bold 46px Inter, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`${currentScore}`, centerX, centerY - 5);
-            
-            ctx.font = '500 11px JetBrains Mono';
+            ctx.fillText(`${currentScore}`, centerX, centerY - 6);
+
+            // Label
+            ctx.font = `600 10px 'JetBrains Mono', monospace`;
             ctx.fillStyle = color;
-            ctx.fillText('AI PROBABILITY', centerX, centerY + 25);
+            ctx.fillText('PROBABILIDADE AI', centerX, centerY + 26);
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             }
         }
+
         requestAnimationFrame(animate);
     }
 
-    function renderVerdict(score, verdictText) {
-        const color = getColorForScore(score);
-        verdictBanner.textContent = verdictText;
-        verdictBanner.style.color = color;
-        verdictBanner.style.borderColor = `${color}40`;
-        verdictBanner.style.boxShadow = `0 4px 20px ${color}20`;
+    // --- Analysis Cards ---
+    function formatValue(value) {
+        if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+        if (typeof value === 'number') return Number.isInteger(value) ? value : value.toFixed(3);
+        if (Array.isArray(value)) return value.map(v => typeof v === 'number' ? v.toFixed(2) : v).join(', ');
+        if (typeof value === 'object' && value !== null) {
+            return Object.entries(value).map(([k, v]) => `${k}: ${formatValue(v)}`).join(' | ');
+        }
+        return String(value);
+    }
+
+    function renderDetailsTable(obj) {
+        if (!obj || Object.keys(obj).length === 0) return '';
+        let html = '<table class="metadata-table"><tbody>';
+        for (const [k, v] of Object.entries(obj)) {
+            const val = typeof v === 'string' && v.length > 100 ? v.substring(0, 100) + '…' : formatValue(v);
+            html += `<tr><td><strong>${k}</strong></td><td>${val}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function renderDetailsList(obj) {
+        if (!obj || Object.keys(obj).length === 0) return '';
+        let html = '<ul class="details-list">';
+        for (const [k, v] of Object.entries(obj)) {
+            const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `<li><strong>${formattedKey}:</strong> ${formatValue(v)}</li>`;
+        }
+        html += '</ul>';
+        return html;
     }
 
     function renderAnalysisCards(analyses) {
         analysisGrid.innerHTML = '';
-        
-        const cardDefinitions = [
-            { key: 'metadata', icon: '🏷️', title: 'Metadata Analysis' },
-            { key: 'ela', icon: '🔍', title: 'Error Level Analysis' },
-            { key: 'spectral', icon: '📡', title: 'Spectral Analysis' },
-            { key: 'noise', icon: '📊', title: 'Noise Analysis' },
-            { key: 'statistical', icon: '📈', title: 'Statistical Analysis' },
-            { key: 'artifacts', icon: '🔬', title: 'Artifact Analysis' }
+
+        const cardDefs = [
+            { key: 'metadata',    icon: '📋', title: 'Análise de Metadados',       desc: 'EXIF, C2PA, assinaturas de IA' },
+            { key: 'ela',         icon: '🔍', title: 'Error Level Analysis',       desc: 'Compressão JPEG e uniformidade' },
+            { key: 'spectral',    icon: '📡', title: 'Análise Espectral (FFT)',     desc: 'Domínio de frequência e picos' },
+            { key: 'noise',       icon: '📊', title: 'Análise de Ruído',           desc: 'Padrões de ruído e PRNU' },
+            { key: 'statistical', icon: '📈', title: 'Análise Estatística',        desc: 'Benford, GLCM, entropia' },
+            { key: 'artifacts',   icon: '🔬', title: 'Análise de Artefatos',       desc: 'JPEG grid, checkerboard, edges' }
         ];
 
-        cardDefinitions.forEach((def, index) => {
+        cardDefs.forEach((def, index) => {
             const data = analyses[def.key];
             if (!data) return;
 
             const card = document.createElement('div');
             card.className = 'analysis-card';
-            card.style.animationDelay = `${index * 0.1}s`;
+            card.style.animationDelay = `${index * 0.08}s`;
 
             const color = getColorForScore(data.score);
 
             let contentHTML = '';
 
-            if (data.findings && data.findings.length) {
+            // Findings
+            if (data.findings && data.findings.length > 0) {
                 contentHTML += '<ul class="card-findings">';
                 data.findings.forEach(f => {
                     contentHTML += `<li>${f}</li>`;
                 });
                 contentHTML += '</ul>';
-            } 
-            
+            }
+
+            // Details
             if (data.details) {
                 if (def.key === 'metadata' && data.details.metadata) {
-                    contentHTML += renderDetailsRecursive(data.details.metadata, true);
+                    const metaEntries = Object.entries(data.details.metadata);
+                    if (metaEntries.length > 0) {
+                        // Show max 8 entries
+                        const limited = Object.fromEntries(metaEntries.slice(0, 8));
+                        contentHTML += renderDetailsTable(limited);
+                        if (metaEntries.length > 8) {
+                            contentHTML += `<p style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.4rem;">+${metaEntries.length - 8} campos adicionais</p>`;
+                        }
+                    }
                 } else if (data.details.metrics) {
-                    contentHTML += renderDetailsRecursive(data.details.metrics, false);
-                } else {
-                    contentHTML += renderDetailsRecursive(data.details, false);
+                    contentHTML += renderDetailsList(data.details.metrics);
                 }
             }
 
+            // Visualization
             if (data.visualization) {
-                contentHTML += `<img src="data:image/png;base64,${data.visualization}" class="card-visualization" alt="${def.title} visualization">`;
+                contentHTML += `<img src="data:image/png;base64,${data.visualization}" class="card-visualization" alt="${def.title}" title="Clique para ampliar">`;
             } else if (def.key === 'statistical' && data.histogram_data) {
-                contentHTML += `<div style="height: 120px; width: 100%; margin-top: 1rem;"><canvas id="chart-${def.key}" class="card-visualization"></canvas></div>`;
+                contentHTML += `<div style="height: 120px; width: 100%; margin-top: 0.75rem;"><canvas id="chart-${def.key}" class="card-visualization"></canvas></div>`;
             }
 
             card.innerHTML = `
                 <div class="card-header">
                     <span class="card-icon">${def.icon}</span>
-                    <h3 class="card-title">${def.title}</h3>
+                    <div>
+                        <h3 class="card-title">${def.title}</h3>
+                    </div>
                 </div>
                 <div class="score-bar-container">
-                    <div class="score-bar-fill" style="background-color: ${color}; color: ${color}; width: 0%;" data-target="${data.score}%"></div>
+                    <div class="score-bar-fill" style="background-color: ${color}; color: ${color};" data-target="${data.score}%"></div>
                 </div>
                 <div class="card-content">
                     <span class="card-score-text" style="color: ${color}">Score: ${data.score}%</span>
                     ${contentHTML}
                 </div>
             `;
+
             analysisGrid.appendChild(card);
 
+            // Animate score bar
             setTimeout(() => {
                 const bar = card.querySelector('.score-bar-fill');
                 if (bar) bar.style.width = bar.getAttribute('data-target');
-            }, 300 + (index * 100));
+            }, 300 + (index * 80));
 
+            // Render histogram chart
             if (def.key === 'statistical' && data.histogram_data) {
-                setTimeout(() => renderHistogram(`chart-${def.key}`, data.histogram_data), 500);
+                setTimeout(() => renderHistogram(`chart-${def.key}`, data.histogram_data), 600);
             }
         });
+
+        // Lightbox for visualization images
+        setupLightbox();
     }
 
     function renderHistogram(canvasId, data) {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
+        if (!canvas || typeof Chart === 'undefined') return;
 
         new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: Array.from({length: 32}, (_, i) => i * 8),
+                labels: Array.from({ length: 32 }, (_, i) => i * 8),
                 datasets: [
-                    { label: 'R', data: data.r || [], backgroundColor: 'rgba(239, 68, 68, 0.8)', barPercentage: 1.0, categoryPercentage: 1.0 },
-                    { label: 'G', data: data.g || [], backgroundColor: 'rgba(16, 185, 129, 0.8)', barPercentage: 1.0, categoryPercentage: 1.0 },
-                    { label: 'B', data: data.b || [], backgroundColor: 'rgba(59, 130, 246, 0.8)', barPercentage: 1.0, categoryPercentage: 1.0 }
+                    { label: 'R', data: data.r || [], backgroundColor: 'rgba(239, 68, 68, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'G', data: data.g || [], backgroundColor: 'rgba(16, 185, 129, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'B', data: data.b || [], backgroundColor: 'rgba(59, 130, 246, 0.75)', barPercentage: 1.0, categoryPercentage: 1.0 }
                 ]
             },
             options: {
@@ -385,6 +558,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 interaction: { mode: 'index', intersect: false }
             }
+        });
+    }
+
+    // --- Lightbox ---
+    function setupLightbox() {
+        document.querySelectorAll('.card-visualization').forEach(img => {
+            if (img.tagName !== 'IMG') return;
+            img.addEventListener('click', () => {
+                const overlay = document.createElement('div');
+                overlay.className = 'lightbox-overlay';
+                overlay.innerHTML = `<img src="${img.src}" alt="Visualização ampliada">`;
+                overlay.addEventListener('click', () => overlay.remove());
+                document.addEventListener('keydown', function handler(e) {
+                    if (e.key === 'Escape') {
+                        overlay.remove();
+                        document.removeEventListener('keydown', handler);
+                    }
+                });
+                document.body.appendChild(overlay);
+            });
         });
     }
 });
