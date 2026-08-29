@@ -6,7 +6,8 @@ from flask import Flask, request, jsonify, send_from_directory
 from PIL import Image
 
 from analyzers.metadata_analyzer import analyze_metadata
-from analyzers.ela_analyzer import analyze_ela
+from analyzers.wavelet_analyzer import analyze_wavelet
+from analyzers.clip_analyzer import analyze_clip
 from analyzers.spectral_analyzer import analyze_spectral
 from analyzers.noise_analyzer import analyze_noise
 from analyzers.statistical_analyzer import analyze_statistical
@@ -41,12 +42,13 @@ def calculate_composite_score(analyses):
       o metadata não foi testado com imagens que têm EXIF real da câmera.
     """
     base_weights = {
-        'metadata': 0.28,    # dinamico — mantém lógica original (ver abaixo)
-        'noise': 0.20,       # AUC 0.563 no dataset calibrado
-        'spectral': 0.08,    # AUC 0.403 — parcialmente invertido; recalibrar spectral_analyzer
-        'statistical': 0.32, # AUC 0.764 — analisador mais discriminativo no dataset
-        'ela': 0.12,         # AUC 0.514 — sinal fraco mas consistente
-        'artifacts': 0.06    # AUC 0.403 — parcialmente invertido; recalibrar artifact_analyzer
+        'metadata': 0.22,    # dinâmico — mantém lógica original (ver abaixo)
+        'noise': 0.16,       # AUC 0.563 no dataset calibrado
+        'spectral': 0.07,    # AUC 0.403 — parcialmente invertido; peso reduzido
+        'statistical': 0.27, # AUC 0.764 — analisador mais discriminativo no dataset
+        'wavelet': 0.23,     # substitui ELA — DWT multi-escala, mais discriminativo (peso aumentado)
+        'artifacts': 0.05,   # AUC 0.403 — parcialmente invertido; peso reduzido
+        'clip': 0.35,        # CLIP ViT-B/32 — maior peso (mais preciso); excluído se open_clip indisponível
     }
 
     meta = analyses.get('metadata', {})
@@ -89,7 +91,7 @@ def calculate_concordance(analyses):
     """
     scores = []
     # Collect visual and active forensic analyzers (exclui analisadores que falharam)
-    for key in ['noise', 'spectral', 'statistical', 'ela', 'artifacts']:
+    for key in ['noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip']:
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             scores.append(analyses[key]['score'])
 
@@ -225,6 +227,32 @@ def generate_summary(score, verdict, confidence, analyses):
             # benford_correlation: AUC=0.667, threshold Youden=0.973 (higher_is_real)
             key_findings.append("Gradientes aderem à Lei de Benford natural de superfícies físicas")
 
+    if 'wavelet' in analyses:
+        wav = analyses['wavelet']
+        metrics = wav.get('details', {}).get('metrics', {})
+        kurt_fine = metrics.get('kurtosis_fine', 3.0)
+        spatial_cv = metrics.get('spatial_detail_cv', 0.5)
+        tail_ratio = metrics.get('fine_detail_tail_ratio', 10.0)
+        if kurt_fine > 8.0:
+            key_findings.append("Kurtose elevada nos coeficientes de detalhe fino — assinatura de ruído de sensor fotográfico")
+        elif kurt_fine < 1.5:
+            key_findings.append("Coeficientes de detalhe fino quasi-Gaussianos — padrão de suavização sintética (VAE/UNet)")
+        if spatial_cv < 0.25:
+            key_findings.append("Distribuição espacial de detalhe homogênea — composição sintética detectada")
+        elif spatial_cv > 0.90:
+            key_findings.append("Alta variância espacial de detalhe — variação natural de foco e profundidade de campo")
+
+    if 'clip' in analyses and not analyses['clip'].get('failed'):
+        clip_data = analyses['clip']
+        clip_metrics = clip_data.get('details', {}).get('metrics', {})
+        diff = clip_metrics.get('similarity_diff', 0.0)
+        mode = clip_data.get('details', {}).get('mode', 'unknown')
+        mode_label = "(protótipos do dataset)" if mode == 'prototype' else "(texto — instale protótipos)"
+        if diff > 0.04:
+            key_findings.append(f"Embedding CLIP posicionado na região de imagens sintéticas no espaço latente {mode_label}")
+        elif diff < -0.04:
+            key_findings.append(f"Embedding CLIP posicionado na região de fotografias reais no espaço latente {mode_label}")
+
     if 'artifacts' in analyses:
         art = analyses['artifacts']
         metrics = art.get('details', {}).get('metrics', {})
@@ -251,8 +279,8 @@ def index():
 def health():
     return jsonify({
         'status': 'ok',
-        'version': '2.0.0-calibrated',
-        'analyzers': ['metadata', 'ela', 'spectral', 'noise', 'statistical', 'artifacts']
+        'version': '2.1.0-wavelet-clip',
+        'analyzers': ['metadata', 'wavelet', 'spectral', 'noise', 'statistical', 'artifacts', 'clip']
     })
 
 
@@ -295,11 +323,12 @@ def analyze():
         analyses = {}
         analyzer_configs = [
             ('metadata', analyze_metadata, original_path),
-            ('ela', analyze_ela, original_path),
+            ('wavelet', analyze_wavelet, original_path),
             ('spectral', analyze_spectral, original_path),
             ('noise', analyze_noise, original_path),
             ('statistical', analyze_statistical, original_path),
             ('artifacts', analyze_artifacts, original_path),
+            ('clip', analyze_clip, original_path),
         ]
 
         failed_analyzers = []

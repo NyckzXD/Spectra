@@ -3,3 +3,9 @@ Pillow==11.2.1
 numpy==2.2.6
 scipy==1.15.3
 exifread==3.1.0
+
+# Dependências do analisador CLIP (melhoria 3)
+# Instale com: pip install open-clip-torch
+# ou execute: install_deps.bat
+# Nota: wavelet_analyzer.py usa somente scipy (já instalado)
+open-clip-torch
