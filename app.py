@@ -28,14 +28,25 @@ def calculate_composite_score(analyses):
     """
     Calculate dynamically weighted composite score from all forensic analyses.
     Adapts weights based on metadata signal presence to prevent biasing images without EXIF.
+
+    Pesos calibrados empiricamente em 28/08/2026 a partir de dataset rotulado
+    (9 imagens reais + 8 imagens de IA). AUC por analisador no dataset:
+      statistical  AUC=0.764 (mais discriminativo) -> peso aumentado
+      noise        AUC=0.563 (sinal moderado)       -> peso mantido
+      ela          AUC=0.514 (sinal fraco)           -> peso mantido
+      spectral     AUC=0.403 (parcialmente invertido)-> peso reduzido
+      artifacts    AUC=0.403 (parcialmente invertido)-> peso reduzido
+      metadata     AUC=0.500 (ruido no dataset*)     -> mantém lógica dinâmica
+    * Todas as imagens do dataset tinham score=50 por falta de EXIF;
+      o metadata não foi testado com imagens que têm EXIF real da câmera.
     """
     base_weights = {
-        'metadata': 0.28,
-        'noise': 0.22,
-        'spectral': 0.20,
-        'statistical': 0.16,
-        'ela': 0.12,
-        'artifacts': 0.12
+        'metadata': 0.28,    # dinamico — mantém lógica original (ver abaixo)
+        'noise': 0.20,       # AUC 0.563 no dataset calibrado
+        'spectral': 0.08,    # AUC 0.403 — parcialmente invertido; recalibrar spectral_analyzer
+        'statistical': 0.32, # AUC 0.764 — analisador mais discriminativo no dataset
+        'ela': 0.12,         # AUC 0.514 — sinal fraco mas consistente
+        'artifacts': 0.06    # AUC 0.403 — parcialmente invertido; recalibrar artifact_analyzer
     }
 
     meta = analyses.get('metadata', {})
@@ -167,33 +178,52 @@ def generate_summary(score, verdict, confidence, analyses):
         noise = analyses['noise']
         metrics = noise.get('details', {}).get('metrics', {})
         p_corr = metrics.get('poisson_correlation', 0)
-        if p_corr > 0.20:
+        b_noise = metrics.get('b_noise_std', 0)
+        # Limiar poisson_correlation calibrado: AUC 0.597, threshold Youden=0.036
+        if p_corr > 0.036:
             key_findings.append("Ruído com correlação física Poisson-Gaussiana (típico de sensor fotográfico)")
         elif p_corr < -0.05:
             key_findings.append("Distribuição de ruído não-física (indicador de síntese algorítmica)")
+        # b_noise_std: AUC 0.750, threshold Youden=8.087 — valor alto → IA
+        if b_noise >= 8.087:
+            key_findings.append("Desvio-padrão do canal azul elevado — padrão consistente com síntese algorítmica")
 
     if 'spectral' in analyses:
         spec = analyses['spectral']
         metrics = spec.get('details', {}).get('metrics', {})
+        # hf_spectral_flatness: métrica mais discriminativa do dataset (AUC=0.875)
+        # Threshold Youden calibrado: 0.9705 (higher_is_ai)
         flatness = metrics.get('hf_spectral_flatness', 0.5)
         peaks = metrics.get('anomalous_peaks', 0)
         alpha = metrics.get('spectral_slope_alpha', 1.0)
         r2 = metrics.get('power_law_fit_r2', 1.0)
-        if 0.85 <= alpha <= 1.30 and r2 > 0.94:
+        if flatness >= 0.9705:
+            key_findings.append("Planura espectral de alta frequência elevada — forte indicador de síntese por IA (AUC=0.875)")
+        elif 0.85 <= alpha <= 1.30 and r2 > 0.989:
+            # r2 threshold calibrado: Youden=0.989 (higher_is_real, AUC=0.625)
             key_findings.append("Decaimento espectral de Fourier aderente à lei de potência óptica natural (1/f)")
-        elif flatness > 0.85:
-            key_findings.append("Ruído espectral de alta frequência excessivamente plano (típico de difusão de IA)")
         elif peaks >= 3:
             key_findings.append("Picos harmônicos periódicos detectados no espectro de Fourier")
 
     if 'statistical' in analyses:
         stat = analyses['statistical']
         metrics = stat.get('details', {}).get('metrics', {})
+        # r_entropy: AUC=0.847, threshold Youden=7.104 (higher_is_real)
+        r_entropy = metrics.get('r_entropy', 0)
+        g_entropy = metrics.get('g_entropy', 0)
+        avg_entropy = metrics.get('avg_entropy', 0)
         benford_corr = metrics.get('benford_correlation', 1.0)
-        if benford_corr > 0.98:
+        benford_dev = metrics.get('benford_deviation', 0)
+        if r_entropy >= 7.104 and g_entropy >= 7.038:
+            key_findings.append("Entropia dos canais RGB alta e equilibrada — padrão de imagem fotográfica natural (AUC=0.847)")
+        elif r_entropy < 7.104 or g_entropy < 7.038:
+            key_findings.append("Entropia de canal reduzida — frequente em imagens sintéticas (limiar calibrado)")
+        # benford_deviation: AUC=0.736, threshold=0.137 (higher_is_ai)
+        if benford_dev >= 0.137:
+            key_findings.append("Desvio da Lei de Benford acima do limiar calibrado — indicador de síntese algorítmica")
+        elif benford_corr > 0.973:
+            # benford_correlation: AUC=0.667, threshold Youden=0.973 (higher_is_real)
             key_findings.append("Gradientes aderem à Lei de Benford natural de superfícies físicas")
-        if metrics.get('sat_p90', 0) > 0.85 and metrics.get('sat_mean', 0) > 0.55:
-            key_findings.append("Perfil de saturação cromática hiper-contrastado comum em geradores modernos")
 
     if 'artifacts' in analyses:
         art = analyses['artifacts']

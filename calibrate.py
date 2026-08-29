@@ -343,7 +343,7 @@ def build_report(rows, current_composite_scores, verdict_func, out_dir):
 
     # --- Escreve CSV ---
     csv_path = os.path.join(out_dir, 'calibration_data.csv')
-    with open(csv_path, 'w', newline='') as f:
+    with open(csv_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         header = ['path', 'label'] + metric_names
         writer.writerow(header)
@@ -352,7 +352,7 @@ def build_report(rows, current_composite_scores, verdict_func, out_dir):
 
     # --- Escreve JSON bruto ---
     json_path = os.path.join(out_dir, 'calibration_raw.json')
-    with open(json_path, 'w') as f:
+    with open(json_path, 'w', encoding='utf-8') as f:
         json.dump({
             'metric_ranking': metric_results,
             'current_composite_confusion': current_cm,
@@ -364,7 +364,7 @@ def build_report(rows, current_composite_scores, verdict_func, out_dir):
 
     # --- Escreve Markdown legível ---
     md_path = os.path.join(out_dir, 'calibration_report.md')
-    with open(md_path, 'w') as f:
+    with open(md_path, 'w', encoding='utf-8') as f:
         f.write("# Relatório de Calibração — Spectra\n\n")
         f.write(f"Dataset: {sum(1 for l in labels if l==0)} imagens reais, "
                 f"{sum(1 for l in labels if l==1)} imagens de IA.\n\n")
