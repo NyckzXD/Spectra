@@ -307,7 +307,7 @@ def build_report(rows, current_composite_scores, verdict_func, out_dir):
 
     # --- 3. Matriz de confusão por analisador individual (score bruto >=50) ---
     per_analyzer_cm = {}
-    for analyzer in ['metadata', 'noise', 'spectral', 'statistical', 'ela', 'artifacts']:
+    for analyzer in ['metadata', 'noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip']:
         col = f'{analyzer}.score'
         values = [r.get(col) for r in rows]
         if any(v is None for v in values):
@@ -316,7 +316,7 @@ def build_report(rows, current_composite_scores, verdict_func, out_dir):
         per_analyzer_cm[analyzer]['auc'] = compute_auc(values, labels)
 
     # --- 4. Regressão logística aprendida a partir dos 6 scores ---
-    analyzer_order = ['metadata', 'noise', 'spectral', 'statistical', 'ela', 'artifacts']
+    analyzer_order = ['metadata', 'noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip']
     X = []
     valid_idx = []
     for i, r in enumerate(rows):
@@ -454,7 +454,8 @@ def main():
     sys.path.insert(0, args.project_root)
     try:
         from analyzers.metadata_analyzer import analyze_metadata
-        from analyzers.ela_analyzer import analyze_ela
+        from analyzers.wavelet_analyzer import analyze_wavelet
+        from analyzers.clip_analyzer import analyze_clip
         from analyzers.spectral_analyzer import analyze_spectral
         from analyzers.noise_analyzer import analyze_noise
         from analyzers.statistical_analyzer import analyze_statistical
@@ -467,11 +468,12 @@ def main():
 
     analyze_funcs = {
         'metadata': analyze_metadata,
+        'wavelet': analyze_wavelet,
         'noise': analyze_noise,
         'spectral': analyze_spectral,
         'statistical': analyze_statistical,
-        'ela': analyze_ela,
         'artifacts': analyze_artifacts,
+        'clip': analyze_clip,
     }
 
     real_paths = list_images(args.real_dir)
