@@ -1,14 +1,12 @@
 # Spectra
 
-**Analisador Forense de Imagens com IA** — detecta se uma imagem foi gerada por inteligência artificial ou capturada por uma camera fisica, utilizando analise forense multi-espectral.
+**Analisador de Imagens com IA** — detecta se uma imagem foi gerada por inteligência artificial ou capturada por uma camera fisica, utilizando analise forense multi-espectral e Figma para design.
 
 ---
 
 ## Visao Geral
 
 O Spectra e uma aplicacao web que combina seis analisadores forenses independentes para produzir uma pontuacao de autenticidade composta para qualquer imagem enviada. Cada analisador examina uma camada de sinal distinta — desde metadados EXIF e artefatos de compressao JPEG ate padroes espectrais de Fourier e distribuicoes estatisticas em nivel de pixel — e os resultados sao agregados com pesos calibrados empiricamente.
-
-O sistema e projetado para ser transparente: cada pontuacao e acompanhada pelas saidas individuais de cada analisador, achados forenses principais e um nivel de confianca derivado da concordancia entre os analisadores.
 
 ---
 
@@ -18,7 +16,7 @@ O sistema e projetado para ser transparente: cada pontuacao e acompanhada pelas 
 spectra/
 ├── app.py                   # Aplicacao Flask, pontuacao composta, endpoints da API
 ├── main.py                  # Ponto de entrada com banner de inicializacao
-├── calibrate.py             # Ferramenta de calibracao empirica (AUC + threshold de Youden)
+├── calibrate.py             # Ferramenta de calibracao (AUC + threshold de Youden)
 ├── test_accuracy.py         # Suite de avaliacao de acuracia
 ├── requirements.txt
 ├── analyzers/
@@ -32,7 +30,6 @@ spectra/
 │   ├── real/                # Fotografias reais rotuladas (para calibracao)
 │   └── ai/                  # Imagens geradas por IA rotuladas (para calibracao)
 ├── static/                  # Frontend (HTML/CSS/JS)
-├── uploads/                 # Diretorio de upload temporario (limpeza automatica)
 └── resultados/              # Relatorios de saida da calibracao
 ```
 
