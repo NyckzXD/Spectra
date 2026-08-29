@@ -55,16 +55,11 @@ def calculate_composite_score(analyses):
     has_meta_signal = meta.get('has_signal', False)
     meta_score = meta.get('score', 50)
 
-    # Dynamic adjustment based on metadata signal
     if has_meta_signal and meta_score >= 90:
-        # Decisive AI signatures (prompts, generator tags, C2PA)
         base_weights['metadata'] = 0.45
     elif has_meta_signal and meta_score <= 15:
-        # Decisive authentic camera EXIF (Make, Model, ISO, Exposure, GPS)
         base_weights['metadata'] = 0.35
     elif not has_meta_signal:
-        # Neutral metadata (stripped EXIF from web/social media)
-        # Exclude metadata from pulling the composite score
         base_weights['metadata'] = 0.0
 
     total_score = 0.0
@@ -90,7 +85,6 @@ def calculate_concordance(analyses):
     Returns confidence level ('high', 'medium', 'low') and agreement ratio.
     """
     scores = []
-    # Collect visual and active forensic analyzers (exclui analisadores que falharam)
     for key in ['noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip']:
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             scores.append(analyses[key]['score'])
@@ -102,7 +96,6 @@ def calculate_concordance(analyses):
     if len(scores) < 3:
         return 'low', 0.0
 
-    # Classify each score
     classifications = []
     for s in scores:
         if s <= 38:
@@ -112,7 +105,6 @@ def calculate_concordance(analyses):
         else:
             classifications.append('inconclusive')
 
-    # Count agreement
     from collections import Counter
     counts = Counter(classifications)
     most_common, most_count = counts.most_common(1)[0]
@@ -167,7 +159,6 @@ def generate_summary(score, verdict, confidence, analyses):
             "Múltiplos analisadores identificaram fortes assinaturas forenses de síntese algorítmica por IA (Difusão/VAE/Redes Neurais)."
         )
 
-    # Key findings
     key_findings = []
 
     if 'metadata' in analyses:
@@ -181,20 +172,16 @@ def generate_summary(score, verdict, confidence, analyses):
         metrics = noise.get('details', {}).get('metrics', {})
         p_corr = metrics.get('poisson_correlation', 0)
         b_noise = metrics.get('b_noise_std', 0)
-        # Limiar poisson_correlation calibrado: AUC 0.597, threshold Youden=0.036
         if p_corr > 0.036:
             key_findings.append("Ruído com correlação física Poisson-Gaussiana (típico de sensor fotográfico)")
         elif p_corr < -0.05:
             key_findings.append("Distribuição de ruído não-física (indicador de síntese algorítmica)")
-        # b_noise_std: AUC 0.750, threshold Youden=8.087 — valor alto → IA
         if b_noise >= 8.087:
             key_findings.append("Desvio-padrão do canal azul elevado — padrão consistente com síntese algorítmica")
 
     if 'spectral' in analyses:
         spec = analyses['spectral']
         metrics = spec.get('details', {}).get('metrics', {})
-        # hf_spectral_flatness: métrica mais discriminativa do dataset (AUC=0.875)
-        # Threshold Youden calibrado: 0.9705 (higher_is_ai)
         flatness = metrics.get('hf_spectral_flatness', 0.5)
         peaks = metrics.get('anomalous_peaks', 0)
         alpha = metrics.get('spectral_slope_alpha', 1.0)
@@ -202,7 +189,6 @@ def generate_summary(score, verdict, confidence, analyses):
         if flatness >= 0.9705:
             key_findings.append("Planura espectral de alta frequência elevada — forte indicador de síntese por IA (AUC=0.875)")
         elif 0.85 <= alpha <= 1.30 and r2 > 0.989:
-            # r2 threshold calibrado: Youden=0.989 (higher_is_real, AUC=0.625)
             key_findings.append("Decaimento espectral de Fourier aderente à lei de potência óptica natural (1/f)")
         elif peaks >= 3:
             key_findings.append("Picos harmônicos periódicos detectados no espectro de Fourier")
@@ -210,7 +196,6 @@ def generate_summary(score, verdict, confidence, analyses):
     if 'statistical' in analyses:
         stat = analyses['statistical']
         metrics = stat.get('details', {}).get('metrics', {})
-        # r_entropy: AUC=0.847, threshold Youden=7.104 (higher_is_real)
         r_entropy = metrics.get('r_entropy', 0)
         g_entropy = metrics.get('g_entropy', 0)
         avg_entropy = metrics.get('avg_entropy', 0)
@@ -220,11 +205,9 @@ def generate_summary(score, verdict, confidence, analyses):
             key_findings.append("Entropia dos canais RGB alta e equilibrada — padrão de imagem fotográfica natural (AUC=0.847)")
         elif r_entropy < 7.104 or g_entropy < 7.038:
             key_findings.append("Entropia de canal reduzida — frequente em imagens sintéticas (limiar calibrado)")
-        # benford_deviation: AUC=0.736, threshold=0.137 (higher_is_ai)
         if benford_dev >= 0.137:
             key_findings.append("Desvio da Lei de Benford acima do limiar calibrado — indicador de síntese algorítmica")
         elif benford_corr > 0.973:
-            # benford_correlation: AUC=0.667, threshold Youden=0.973 (higher_is_real)
             key_findings.append("Gradientes aderem à Lei de Benford natural de superfícies físicas")
 
     if 'wavelet' in analyses:
@@ -304,22 +287,18 @@ def analyze():
 
     original_path = None
     try:
-        # Determine extension and unique temp filename
         ext = os.path.splitext(file.filename)[1].lower() if '.' in file.filename else '.png'
         temp_name = f"upload_{int(time.time() * 1000)}_{os.urandom(4).hex()}{ext}"
         original_path = os.path.join(UPLOAD_FOLDER, temp_name)
 
-        # Save original intact file (preserves compression, EXIF, and native structure)
         file.save(original_path)
         file_size = os.path.getsize(original_path)
 
-        # Validate with PIL and extract fundamental format info
         with Image.open(original_path) as img:
             image_format = img.format or 'Unknown'
             image_size = img.size
             image_mode = img.mode
 
-        # Run all analyzers on the authentic source file
         analyses = {}
         analyzer_configs = [
             ('metadata', analyze_metadata, original_path),
@@ -348,14 +327,11 @@ def analyze():
                 failed_analyzers.append(key)
                 traceback.print_exc()
 
-        # Calculate composite score with dynamic weighting
         score = calculate_composite_score(analyses)
         verdict, verdict_level = get_verdict(score)
 
-        # Calculate concordance
         confidence, agreement = calculate_concordance(analyses)
 
-        # Generate summary
         summary = generate_summary(score, verdict, confidence, analyses)
 
         if failed_analyzers:
@@ -365,7 +341,6 @@ def analyze():
                 f"cálculo — o resultado reflete apenas os analisadores bem-sucedidos."
             )
 
-        # Processing time
         elapsed = round(time.time() - start_time, 2)
 
         return jsonify({
@@ -393,7 +368,6 @@ def analyze():
         return jsonify({'success': False, 'error': f'Erro ao processar imagem: {str(e)}'}), 500
 
     finally:
-        # Clean up temporary uploaded file safely
         if original_path and os.path.exists(original_path):
             try:
                 os.remove(original_path)
