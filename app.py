@@ -232,11 +232,11 @@ def generate_summary(score, verdict, confidence, analyses):
         n_metrics = neural_data.get('details', {}).get('metrics', {})
         ai_prob = n_metrics.get('probabilidade_ai', 0.5)
         real_prob = n_metrics.get('probabilidade_real', 0.5)
-        backbone = n_metrics.get('backbone', 'EfficientNetV2')
+        model_name = n_metrics.get('modelo_pretreinado', 'Vision Transformer (HF)')
         if ai_prob >= 0.70:
-            key_findings.append(f"Rede neural {backbone} (Transfer Learning) detectou fortes assinaturas de IA ({ai_prob:.1%})")
+            key_findings.append(f"Detector Neural ({model_name}) identificou padrões de geração sintética com probabilidade de {ai_prob:.1%}")
         elif real_prob >= 0.70:
-            key_findings.append(f"Rede neural {backbone} (Transfer Learning) confirmou características de foto real ({real_prob:.1%})")
+            key_findings.append(f"Detector Neural ({model_name}) classificou como foto autêntica com probabilidade de {real_prob:.1%}")
 
     if 'artifacts' in analyses:
         art = analyses['artifacts']
