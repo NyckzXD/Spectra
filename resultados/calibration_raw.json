@@ -1,0 +1,651 @@
+{
+  "metric_ranking": [
+    {
+      "metric": "spectral.hf_spectral_flatness",
+      "auc": 0.875,
+      "discriminative_power": 0.875,
+      "suggested_threshold": 0.97045,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "statistical.r_entropy",
+      "auc": 0.1527777777777778,
+      "discriminative_power": 0.8472222222222222,
+      "suggested_threshold": 7.10395,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "statistical.g_entropy",
+      "auc": 0.18055555555555555,
+      "discriminative_power": 0.8194444444444444,
+      "suggested_threshold": 7.0381,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "artifacts.jpeg_grid_ratio",
+      "auc": 0.2222222222222222,
+      "discriminative_power": 0.7777777777777778,
+      "suggested_threshold": 1.0003,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "ela.mean_ela",
+      "auc": 0.7777777777777778,
+      "discriminative_power": 0.7777777777777778,
+      "suggested_threshold": 2.5,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "statistical.avg_entropy",
+      "auc": 0.2361111111111111,
+      "discriminative_power": 0.7638888888888888,
+      "suggested_threshold": 7.06975,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "statistical.score",
+      "auc": 0.7638888888888888,
+      "discriminative_power": 0.7638888888888888,
+      "suggested_threshold": 52.0,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "ela.std_ela",
+      "auc": 0.75,
+      "discriminative_power": 0.75,
+      "suggested_threshold": 1.635,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.b_noise_std",
+      "auc": 0.75,
+      "discriminative_power": 0.75,
+      "suggested_threshold": 8.08675,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "spectral.hf_lf_energy_ratio",
+      "auc": 0.75,
+      "discriminative_power": 0.75,
+      "suggested_threshold": 0.2102,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.avg_noise_std",
+      "auc": 0.7361111111111112,
+      "discriminative_power": 0.7361111111111112,
+      "suggested_threshold": 7.65245,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "statistical.benford_deviation",
+      "auc": 0.7361111111111112,
+      "discriminative_power": 0.7361111111111112,
+      "suggested_threshold": 0.13705,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "ela.block_variance",
+      "auc": 0.7222222222222222,
+      "discriminative_power": 0.7222222222222222,
+      "suggested_threshold": 1.2999999999999998,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.r_noise_std",
+      "auc": 0.7083333333333334,
+      "discriminative_power": 0.7083333333333334,
+      "suggested_threshold": 8.542950000000001,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "statistical.glcm_homogeneity",
+      "auc": 0.7083333333333334,
+      "discriminative_power": 0.7083333333333334,
+      "suggested_threshold": 0.7311,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "noise.g_noise_std",
+      "auc": 0.6944444444444444,
+      "discriminative_power": 0.6944444444444444,
+      "suggested_threshold": 4.5093499999999995,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "statistical.b_entropy",
+      "auc": 0.3055555555555556,
+      "discriminative_power": 0.6944444444444444,
+      "suggested_threshold": 7.113250000000001,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "statistical.b_mean",
+      "auc": 0.6944444444444444,
+      "discriminative_power": 0.6944444444444444,
+      "suggested_threshold": 131.85500000000002,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.375,
+      "fpr_at_threshold": 0.0
+    },
+    {
+      "metric": "noise.channel_correlation_rg",
+      "auc": 0.3333333333333333,
+      "discriminative_power": 0.6666666666666667,
+      "suggested_threshold": 0.96805,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "statistical.benford_correlation",
+      "auc": 0.3333333333333333,
+      "discriminative_power": 0.6666666666666667,
+      "suggested_threshold": 0.97255,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.625,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "statistical.b_std",
+      "auc": 0.6666666666666666,
+      "discriminative_power": 0.6666666666666666,
+      "suggested_threshold": 51.69,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "statistical.g_mean",
+      "auc": 0.6666666666666666,
+      "discriminative_power": 0.6666666666666666,
+      "suggested_threshold": 104.22999999999999,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "statistical.r_mean",
+      "auc": 0.6388888888888888,
+      "discriminative_power": 0.6388888888888888,
+      "suggested_threshold": 100.245,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "artifacts.orientation_coherence",
+      "auc": 0.625,
+      "discriminative_power": 0.625,
+      "suggested_threshold": 4.25e-05,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "spectral.power_law_fit_r2",
+      "auc": 0.375,
+      "discriminative_power": 0.625,
+      "suggested_threshold": 0.9894000000000001,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "artifacts.edge_orientation_entropy",
+      "auc": 0.3888888888888889,
+      "discriminative_power": 0.6111111111111112,
+      "suggested_threshold": 5.1311,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "noise.avg_channel_correlation",
+      "auc": 0.3888888888888889,
+      "discriminative_power": 0.6111111111111112,
+      "suggested_threshold": 0.8293999999999999,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.channel_correlation_rb",
+      "auc": 0.3888888888888889,
+      "discriminative_power": 0.6111111111111112,
+      "suggested_threshold": 0.7026,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "statistical.glcm_contrast",
+      "auc": 0.6111111111111112,
+      "discriminative_power": 0.6111111111111112,
+      "suggested_threshold": 2.38485,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "artifacts.score",
+      "auc": 0.4027777777777778,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 54.0,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "artifacts.texture_cv",
+      "auc": 0.4027777777777778,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 0.26405,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "ela.uniformity_cv",
+      "auc": 0.5972222222222222,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 0.6168,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "noise.g_kurtosis",
+      "auc": 0.5972222222222222,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 9.8947,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "noise.poisson_correlation",
+      "auc": 0.4027777777777778,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 0.0358,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "spectral.score",
+      "auc": 0.4027777777777778,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 59.0,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "statistical.g_std",
+      "auc": 0.5972222222222222,
+      "discriminative_power": 0.5972222222222222,
+      "suggested_threshold": 53.43,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.75,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "artifacts.edge_sharpness_cv",
+      "auc": 0.5833333333333334,
+      "discriminative_power": 0.5833333333333334,
+      "suggested_threshold": 0.44,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "artifacts.edge_sharpness_skew",
+      "auc": 0.4166666666666667,
+      "discriminative_power": 0.5833333333333333,
+      "suggested_threshold": 2.4970499999999998,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "ela.texture_error_ratio",
+      "auc": 0.4166666666666667,
+      "discriminative_power": 0.5833333333333333,
+      "suggested_threshold": 2.1976,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.b_skewness",
+      "auc": 0.4305555555555556,
+      "discriminative_power": 0.5694444444444444,
+      "suggested_threshold": 0.4058,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.625,
+      "fpr_at_threshold": 0.3333333333333333
+    },
+    {
+      "metric": "spectral.peak_strength",
+      "auc": 0.5694444444444444,
+      "discriminative_power": 0.5694444444444444,
+      "suggested_threshold": 1.13,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "statistical.r_std",
+      "auc": 0.4305555555555556,
+      "discriminative_power": 0.5694444444444444,
+      "suggested_threshold": 48.334999999999994,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.375,
+      "fpr_at_threshold": 0.0
+    },
+    {
+      "metric": "noise.score",
+      "auc": 0.5625,
+      "discriminative_power": 0.5625,
+      "suggested_threshold": 31.0,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "statistical.sat_p90",
+      "auc": 0.4375,
+      "discriminative_power": 0.5625,
+      "suggested_threshold": 0.8627,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "ela.quadrant_cv",
+      "auc": 0.4444444444444444,
+      "discriminative_power": 0.5555555555555556,
+      "suggested_threshold": 0.2139,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "noise.avg_autocorrelation",
+      "auc": 0.5555555555555556,
+      "discriminative_power": 0.5555555555555556,
+      "suggested_threshold": 0.44645,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.channel_correlation_gb",
+      "auc": 0.4444444444444444,
+      "discriminative_power": 0.5555555555555556,
+      "suggested_threshold": 0.9097999999999999,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.r_kurtosis",
+      "auc": 0.5555555555555556,
+      "discriminative_power": 0.5555555555555556,
+      "suggested_threshold": 7.1327,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "spectral.anomalous_peaks",
+      "auc": 0.4652777777777778,
+      "discriminative_power": 0.5347222222222222,
+      "suggested_threshold": 4.0,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.4444444444444444
+    },
+    {
+      "metric": "noise.b_kurtosis",
+      "auc": 0.4722222222222222,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 9.255500000000001,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.875,
+      "fpr_at_threshold": 0.5555555555555556
+    },
+    {
+      "metric": "noise.g_skewness",
+      "auc": 0.5277777777777778,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 0.5709500000000001,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "noise.r_skewness",
+      "auc": 0.5277777777777778,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 0.6979500000000001,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.5,
+      "fpr_at_threshold": 0.2222222222222222
+    },
+    {
+      "metric": "spectral.spectral_slope_alpha",
+      "auc": 0.4722222222222222,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 1.4191500000000001,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "statistical.glcm_energy",
+      "auc": 0.5277777777777778,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 0.0297915,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.375,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "statistical.sat_std",
+      "auc": 0.4722222222222222,
+      "discriminative_power": 0.5277777777777778,
+      "suggested_threshold": 0.25675000000000003,
+      "direction": "higher_is_real",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.7777777777777778
+    },
+    {
+      "metric": "artifacts.texture_variance",
+      "auc": 0.4861111111111111,
+      "discriminative_power": 0.5138888888888888,
+      "suggested_threshold": 67.155,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "ela.score",
+      "auc": 0.5138888888888888,
+      "discriminative_power": 0.5138888888888888,
+      "suggested_threshold": 56.0,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 0.25,
+      "fpr_at_threshold": 0.1111111111111111
+    },
+    {
+      "metric": "statistical.sat_mean",
+      "auc": 0.4861111111111111,
+      "discriminative_power": 0.5138888888888888,
+      "suggested_threshold": 0.16344999999999998,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 0.6666666666666666
+    },
+    {
+      "metric": "metadata.score",
+      "auc": 0.5,
+      "discriminative_power": 0.5,
+      "suggested_threshold": 50.0,
+      "direction": "higher_is_ai",
+      "tpr_at_threshold": 1.0,
+      "fpr_at_threshold": 1.0
+    }
+  ],
+  "current_composite_confusion": {
+    "threshold": 50,
+    "tp": 6,
+    "fp": 4,
+    "fn": 2,
+    "tn": 5,
+    "accuracy": 0.6470588235294118,
+    "precision": 0.6,
+    "recall": 0.75,
+    "f1": 0.6666666666666665
+  },
+  "per_analyzer_confusion": {
+    "metadata": {
+      "threshold": 50,
+      "tp": 8,
+      "fp": 9,
+      "fn": 0,
+      "tn": 0,
+      "accuracy": 0.47058823529411764,
+      "precision": 0.47058823529411764,
+      "recall": 1.0,
+      "f1": 0.6399999999999999,
+      "auc": 0.5
+    },
+    "noise": {
+      "threshold": 50,
+      "tp": 4,
+      "fp": 5,
+      "fn": 4,
+      "tn": 4,
+      "accuracy": 0.47058823529411764,
+      "precision": 0.4444444444444444,
+      "recall": 0.5,
+      "f1": 0.47058823529411764,
+      "auc": 0.5625
+    },
+    "spectral": {
+      "threshold": 50,
+      "tp": 4,
+      "fp": 6,
+      "fn": 4,
+      "tn": 3,
+      "accuracy": 0.4117647058823529,
+      "precision": 0.4,
+      "recall": 0.5,
+      "f1": 0.4444444444444445,
+      "auc": 0.4027777777777778
+    },
+    "statistical": {
+      "threshold": 50,
+      "tp": 8,
+      "fp": 6,
+      "fn": 0,
+      "tn": 3,
+      "accuracy": 0.6470588235294118,
+      "precision": 0.5714285714285714,
+      "recall": 1.0,
+      "f1": 0.7272727272727273,
+      "auc": 0.7638888888888888
+    },
+    "ela": {
+      "threshold": 50,
+      "tp": 3,
+      "fp": 3,
+      "fn": 5,
+      "tn": 6,
+      "accuracy": 0.5294117647058824,
+      "precision": 0.5,
+      "recall": 0.375,
+      "f1": 0.42857142857142855,
+      "auc": 0.5138888888888888
+    },
+    "artifacts": {
+      "threshold": 50,
+      "tp": 3,
+      "fp": 6,
+      "fn": 5,
+      "tn": 3,
+      "accuracy": 0.35294117647058826,
+      "precision": 0.3333333333333333,
+      "recall": 0.375,
+      "f1": 0.35294117647058826,
+      "auc": 0.4027777777777778
+    }
+  },
+  "logistic_regression": {
+    "weights": {
+      "metadata": 0.0,
+      "noise": 1.9997398516057086,
+      "spectral": -2.3433857041703408,
+      "statistical": 2.516906696948903,
+      "ela": 0.5056155046534234,
+      "artifacts": -0.21901235855453907
+    },
+    "bias": -0.49994866390273296,
+    "feature_mean": {
+      "metadata": 50.0,
+      "noise": 50.35294117647059,
+      "spectral": 54.8235294117647,
+      "statistical": 64.11764705882354,
+      "ela": 43.64705882352941,
+      "artifacts": 44.0
+    },
+    "feature_std": {
+      "metadata": 1.0,
+      "noise": 17.70656633425806,
+      "spectral": 13.4961227291294,
+      "statistical": 15.14588801871427,
+      "ela": 10.272414095502622,
+      "artifacts": 16.420933555176738
+    },
+    "train_accuracy": 0.9411764705882353,
+    "n_samples": 17
+  },
+  "n_real": 9,
+  "n_ai": 8
+}
