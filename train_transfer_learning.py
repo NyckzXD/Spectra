@@ -64,7 +64,7 @@ def create_model(backbone_name: str = 'efficientnet_v2_s', num_classes: int = 2)
             nn.Dropout(p=0.3, inplace=True),
             nn.Linear(in_features, 256),
             nn.GELU(),
-            nn.BatchNorm1d(256),
+            nn.LayerNorm(256),
             nn.Dropout(p=0.2, inplace=True),
             nn.Linear(256, num_classes)
         )
@@ -76,7 +76,7 @@ def create_model(backbone_name: str = 'efficientnet_v2_s', num_classes: int = 2)
             nn.Dropout(p=0.3, inplace=True),
             nn.Linear(in_features, 256),
             nn.GELU(),
-            nn.BatchNorm1d(256),
+            nn.LayerNorm(256),
             nn.Dropout(p=0.2, inplace=True),
             nn.Linear(256, num_classes)
         )
@@ -88,7 +88,7 @@ def create_model(backbone_name: str = 'efficientnet_v2_s', num_classes: int = 2)
             nn.Dropout(p=0.3, inplace=True),
             nn.Linear(in_features, 256),
             nn.GELU(),
-            nn.BatchNorm1d(256),
+            nn.LayerNorm(256),
             nn.Dropout(p=0.2, inplace=True),
             nn.Linear(256, num_classes)
         )
@@ -112,6 +112,8 @@ class ForensicImageDataset:
         path = self.file_paths[idx]
         label = self.labels[idx]
         with Image.open(path) as img:
+            if img.mode in ('RGBA', 'LA', 'P', 'PA'):
+                img = img.convert('RGBA')
             img = img.convert('RGB')
             if self.transform:
                 img = self.transform(img)
