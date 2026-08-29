@@ -50,7 +50,9 @@
 }
 
 /* --- Reset --- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -72,12 +74,19 @@ body {
 }
 
 /* --- Scrollbar --- */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
     background: var(--border-medium);
     border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--accent);
 }
@@ -513,7 +522,9 @@ body {
 }
 
 @keyframes spin {
-    100% { transform: rotate(360deg); }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .scanner-bar {
@@ -535,8 +546,13 @@ body {
 }
 
 @keyframes scanMove {
-    0% { transform: translateX(-10%); }
-    100% { transform: translateX(180%); }
+    0% {
+        transform: translateX(-10%);
+    }
+
+    100% {
+        transform: translateX(180%);
+    }
 }
 
 .loading-text {
@@ -553,10 +569,21 @@ body {
 }
 
 @keyframes dots {
-    0% { content: ''; }
-    25% { content: '.'; }
-    50% { content: '..'; }
-    75% { content: '...'; }
+    0% {
+        content: '';
+    }
+
+    25% {
+        content: '.';
+    }
+
+    50% {
+        content: '..';
+    }
+
+    75% {
+        content: '...';
+    }
 }
 
 .progress-steps {
@@ -614,8 +641,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- Verdict Hero --- */
@@ -633,7 +667,9 @@ body {
 .verdict-hero::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 3px;
     background: var(--accent-gradient);
 }
@@ -686,9 +722,17 @@ body {
     background: var(--text-muted);
 }
 
-.confidence-badge.high .confidence-dot { background: var(--color-real); }
-.confidence-badge.medium .confidence-dot { background: var(--color-inconclusive); }
-.confidence-badge.low .confidence-dot { background: var(--color-ai); }
+.confidence-badge.high .confidence-dot {
+    background: var(--color-real);
+}
+
+.confidence-badge.medium .confidence-dot {
+    background: var(--color-inconclusive);
+}
+
+.confidence-badge.low .confidence-dot {
+    background: var(--color-ai);
+}
 
 .verdict-summary {
     color: var(--text-secondary);
@@ -846,7 +890,9 @@ body {
 .analysis-card::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 3px;
     background: var(--accent-gradient);
     opacity: 0;
@@ -864,8 +910,15 @@ body {
 }
 
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .card-header {
@@ -1060,7 +1113,7 @@ canvas.card-visualization {
 .footer {
     text-align: center;
     padding: 24px 80px;
-    color: var(--text-muted);
+    color: var(--text-primary);
     font-size: 12px;
     border-top: 1px solid var(--border-light);
     background: var(--bg-white);
@@ -1074,15 +1127,15 @@ canvas.card-visualization {
         padding: 48px 40px 64px;
         gap: 40px;
     }
-    
+
     .navbar-inner {
         padding: 0 40px;
     }
-    
+
     .results-section {
         padding: 32px 40px 64px;
     }
-    
+
     .footer {
         padding: 24px 40px;
     }
@@ -1092,7 +1145,7 @@ canvas.card-visualization {
     .analysis-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .hero-title {
         font-size: 36px;
     }
@@ -1103,11 +1156,11 @@ canvas.card-visualization {
         grid-template-columns: 1fr;
         gap: 32px;
     }
-    
+
     .hero-text {
         max-width: 100%;
     }
-    
+
     .upload-card {
         min-height: 360px;
         max-width: 560px;
@@ -1119,15 +1172,15 @@ canvas.card-visualization {
     .hero-inner {
         padding: 32px 20px 48px;
     }
-    
+
     .navbar-inner {
         padding: 0 20px;
     }
-    
+
     .results-section {
         padding: 24px 20px 48px;
     }
-    
+
     .footer {
         padding: 20px;
     }
@@ -1172,7 +1225,7 @@ canvas.card-visualization {
     .upload-card {
         min-height: 300px;
     }
-    
+
     .verdict-banner {
         font-size: 20px;
     }
