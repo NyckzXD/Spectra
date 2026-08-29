@@ -8,7 +8,7 @@
 
 O Spectra é uma aplicação web que combina múltiplos analisadores forenses e neurais independentes para produzir uma pontuação de autenticidade composta para qualquer imagem enviada.
 
-### 🌟 Detecção Neural 100% Pronta (Zero Treinamento Local)
+###  Detecção Neural 100% Pronta (Zero Treinamento Local)
 O Spectra agora integra diretamente modelos de ponta da comunidade Hugging Face (como `umm-maybe/AI-image-detector`), pré-treinados em **centenas de milhares de imagens sintéticas** (Midjourney, Stable Diffusion, DALL-E, SDXL, Flux) e fotos reais.
 
 **Você não precisa coletar datasets nem treinar modelos localmente**: ao iniciar o servidor e enviar uma imagem, os pesos são baixados automaticamente e a inferência é executada de forma instantânea.
