@@ -429,11 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cardDefs = [
             { key: 'metadata', icon: '', title: 'Análise de Metadados', desc: 'EXIF, C2PA, assinaturas de IA' },
-            { key: 'ela', icon: '', title: 'Error Level Analysis', desc: 'Compressão JPEG e uniformidade' },
+            { key: 'neural', icon: '', title: 'Análise Neural (Transfer Learning)', desc: 'EfficientNetV2 supervisionado' },
+            { key: 'clip', icon: '', title: 'Representação Latente (CLIP)', desc: 'Espaço latente multimodal ViT' },
+            { key: 'wavelet', icon: '', title: 'Análise Wavelet (DWT)', desc: 'Decomposição multi-escala e textura' },
             { key: 'spectral', icon: '', title: 'Análise Espectral (FFT)', desc: 'Domínio de frequência e picos' },
-            { key: 'noise', icon: '', title: 'Análise de Ruído', desc: 'Padrões de ruído e PRNU' },
-            { key: 'statistical', icon: '', title: 'Análise Estatística', desc: 'Benford, GLCM, entropia' },
-            { key: 'artifacts', icon: '', title: 'Análise de Artefatos', desc: 'JPEG grid, checkerboard, edges' }
+            { key: 'noise', icon: '', title: 'Análise de Ruído', desc: 'Padrões de ruído Poisson-Gaussiano' },
+            { key: 'statistical', icon: '', title: 'Análise Estatística', desc: 'Benford, entropia de canal e GLCM' },
+            { key: 'artifacts', icon: '', title: 'Análise de Artefatos', desc: 'Gradientes de profundidade e nitidez' }
         ];
 
         cardDefs.forEach((def, index) => {

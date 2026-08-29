@@ -8,6 +8,7 @@ from PIL import Image
 from analyzers.metadata_analyzer import analyze_metadata
 from analyzers.wavelet_analyzer import analyze_wavelet
 from analyzers.clip_analyzer import analyze_clip
+from analyzers.neural_analyzer import analyze_neural
 from analyzers.spectral_analyzer import analyze_spectral
 from analyzers.noise_analyzer import analyze_noise
 from analyzers.statistical_analyzer import analyze_statistical
@@ -29,26 +30,16 @@ def calculate_composite_score(analyses):
     """
     Calculate dynamically weighted composite score from all forensic analyses.
     Adapts weights based on metadata signal presence to prevent biasing images without EXIF.
-
-    Pesos calibrados empiricamente em 28/08/2026 a partir de dataset rotulado
-    (9 imagens reais + 8 imagens de IA). AUC por analisador no dataset:
-      statistical  AUC=0.764 (mais discriminativo) -> peso aumentado
-      noise        AUC=0.563 (sinal moderado)       -> peso mantido
-      ela          AUC=0.514 (sinal fraco)           -> peso mantido
-      spectral     AUC=0.403 (parcialmente invertido)-> peso reduzido
-      artifacts    AUC=0.403 (parcialmente invertido)-> peso reduzido
-      metadata     AUC=0.500 (ruido no dataset*)     -> mantém lógica dinâmica
-    * Todas as imagens do dataset tinham score=50 por falta de EXIF;
-      o metadata não foi testado com imagens que têm EXIF real da câmera.
     """
     base_weights = {
-        'metadata': 0.22,    # dinâmico — mantém lógica original (ver abaixo)
-        'noise': 0.16,       # AUC 0.563 no dataset calibrado
-        'spectral': 0.07,    # AUC 0.403 — parcialmente invertido; peso reduzido
-        'statistical': 0.27, # AUC 0.764 — analisador mais discriminativo no dataset
-        'wavelet': 0.23,     # substitui ELA — DWT multi-escala, mais discriminativo (peso aumentado)
-        'artifacts': 0.05,   # AUC 0.403 — parcialmente invertido; peso reduzido
-        'clip': 0.35,        # CLIP ViT-B/32 — maior peso (mais preciso); excluído se open_clip indisponível
+        'metadata': 0.20,    # dinâmico — mantém lógica original
+        'noise': 0.12,       # AUC 0.563 no dataset calibrado
+        'spectral': 0.05,    # AUC 0.403 — parcialmente invertido; peso reduzido
+        'statistical': 0.20, # AUC 0.764 — analisador estatístico
+        'wavelet': 0.18,     # DWT multi-escala
+        'artifacts': 0.05,   # Coeficiente de nitidez
+        'clip': 0.20,        # CLIP ViT-B/32 — representação latente
+        'neural': 0.35,      # EfficientNetV2 Transfer Learning — alta precisão supervisionada
     }
 
     meta = analyses.get('metadata', {})
@@ -85,7 +76,7 @@ def calculate_concordance(analyses):
     Returns confidence level ('high', 'medium', 'low') and agreement ratio.
     """
     scores = []
-    for key in ['noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip']:
+    for key in ['noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip', 'neural']:
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             scores.append(analyses[key]['score'])
 
@@ -236,6 +227,17 @@ def generate_summary(score, verdict, confidence, analyses):
         elif diff < -0.04:
             key_findings.append(f"Embedding CLIP posicionado na região de fotografias reais no espaço latente {mode_label}")
 
+    if 'neural' in analyses and not analyses['neural'].get('failed'):
+        neural_data = analyses['neural']
+        n_metrics = neural_data.get('details', {}).get('metrics', {})
+        ai_prob = n_metrics.get('probabilidade_ai', 0.5)
+        real_prob = n_metrics.get('probabilidade_real', 0.5)
+        backbone = n_metrics.get('backbone', 'EfficientNetV2')
+        if ai_prob >= 0.70:
+            key_findings.append(f"Rede neural {backbone} (Transfer Learning) detectou fortes assinaturas de IA ({ai_prob:.1%})")
+        elif real_prob >= 0.70:
+            key_findings.append(f"Rede neural {backbone} (Transfer Learning) confirmou características de foto real ({real_prob:.1%})")
+
     if 'artifacts' in analyses:
         art = analyses['artifacts']
         metrics = art.get('details', {}).get('metrics', {})
@@ -262,8 +264,8 @@ def index():
 def health():
     return jsonify({
         'status': 'ok',
-        'version': '2.1.0-wavelet-clip',
-        'analyzers': ['metadata', 'wavelet', 'spectral', 'noise', 'statistical', 'artifacts', 'clip']
+        'version': '2.2.0-transfer-learning',
+        'analyzers': ['metadata', 'wavelet', 'spectral', 'noise', 'statistical', 'artifacts', 'clip', 'neural']
     })
 
 
@@ -302,12 +304,13 @@ def analyze():
         analyses = {}
         analyzer_configs = [
             ('metadata', analyze_metadata, original_path),
+            ('neural', analyze_neural, original_path),
+            ('clip', analyze_clip, original_path),
             ('wavelet', analyze_wavelet, original_path),
             ('spectral', analyze_spectral, original_path),
             ('noise', analyze_noise, original_path),
             ('statistical', analyze_statistical, original_path),
             ('artifacts', analyze_artifacts, original_path),
-            ('clip', analyze_clip, original_path),
         ]
 
         failed_analyzers = []

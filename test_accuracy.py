@@ -7,17 +7,21 @@ from analyzers.metadata_analyzer import analyze_metadata
 from analyzers.noise_analyzer import analyze_noise
 from analyzers.spectral_analyzer import analyze_spectral
 from analyzers.statistical_analyzer import analyze_statistical
-from analyzers.ela_analyzer import analyze_ela
+from analyzers.wavelet_analyzer import analyze_wavelet
 from analyzers.artifact_analyzer import analyze_artifacts
+from analyzers.clip_analyzer import analyze_clip
+from analyzers.neural_analyzer import analyze_neural
 
 
 def run_all_analyzers(path):
     analyses = {
         'metadata': analyze_metadata(path),
+        'neural': analyze_neural(path),
+        'clip': analyze_clip(path),
+        'wavelet': analyze_wavelet(path),
         'noise': analyze_noise(path),
         'spectral': analyze_spectral(path),
         'statistical': analyze_statistical(path),
-        'ela': analyze_ela(path),
         'artifacts': analyze_artifacts(path),
     }
     score = calculate_composite_score(analyses)
@@ -108,8 +112,10 @@ if __name__ == '__main__':
         print(f"\n[{name}]")
         print(f"  -> Score Final: {score}% | Veredito: {verdict} ({level}) | Confiança: {conf}")
         print(f"     Detalhes por Analisador:")
-        for k in ['metadata', 'noise', 'spectral', 'statistical', 'ela', 'artifacts']:
-            s = analyses[k]['score']
-            print(f"       - {k.capitalize()}: {s}%")
+        for k in ['metadata', 'neural', 'clip', 'wavelet', 'noise', 'spectral', 'statistical', 'artifacts']:
+            if k in analyses:
+                s = analyses[k]['score']
+                failed = " (desativado/falhou)" if analyses[k].get('failed') else ""
+                print(f"       - {k.capitalize()}: {s}%{failed}")
 
     print("\n=== TESTES CONCLUÍDOS ===")
