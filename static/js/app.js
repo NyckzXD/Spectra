@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cardDefs = [
             { key: 'metadata', icon: '', title: 'Análise de Metadados', desc: 'EXIF, C2PA, assinaturas de IA' },
-            { key: 'neural', icon: '', title: 'Análise Neural (Transfer Learning)', desc: 'EfficientNetV2 supervisionado' },
+            { key: 'neural', icon: '', title: 'Detector Neural Especialista (Hugging Face)', desc: 'Vision Transformer pré-treinado em IA' },
             { key: 'clip', icon: '', title: 'Representação Latente (CLIP)', desc: 'Espaço latente multimodal ViT' },
             { key: 'wavelet', icon: '', title: 'Análise Wavelet (DWT)', desc: 'Decomposição multi-escala e textura' },
             { key: 'spectral', icon: '', title: 'Análise Espectral (FFT)', desc: 'Domínio de frequência e picos' },
