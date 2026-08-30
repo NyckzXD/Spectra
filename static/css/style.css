@@ -1230,3 +1230,157 @@ canvas.card-visualization {
         font-size: 20px;
     }
 }
+
+/* ============================================
+   Dual-Engine Neural Forensics Card Styling
+   ============================================ */
+.neural-dual-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 8px;
+}
+
+.neural-concordance-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.badge-consensus-ai {
+    background: var(--color-ai-bg);
+    color: var(--color-ai);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-consensus-real {
+    background: var(--color-real-bg);
+    color: var(--color-real);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badge-divergence {
+    background: var(--color-suspect-bg);
+    color: var(--color-suspect);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.badge-partial {
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.neural-engines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+}
+
+.neural-engine-card {
+    background: var(--bg-muted);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.neural-engine-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.engine-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.engine-role-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+.engine-certainty-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.cert-high {
+    background: var(--color-real-bg);
+    color: var(--color-real);
+}
+
+.cert-med {
+    background: var(--color-inconclusive-bg);
+    color: var(--color-inconclusive);
+}
+
+.cert-low {
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+}
+
+.engine-model-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.engine-score-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.engine-score-val {
+    font-size: 16px;
+    font-weight: 800;
+    font-family: var(--font-display);
+}
+
+.engine-arch-tag {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.engine-minibar {
+    height: 4px;
+    background: var(--border-light);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.engine-minibar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.engine-probs-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-secondary);
+}

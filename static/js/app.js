@@ -424,12 +424,77 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
 
+    function renderNeuralDualEngines(details) {
+        if (!details || !details.engines) return '';
+        const engines = details.engines;
+        const concordanceCode = details.concordance_code || 'partial';
+        const concordanceText = details.concordance_text || '';
+
+        let badgeClass = 'badge-partial';
+        let badgeIcon = '';
+        if (concordanceCode === 'consensus_ai') {
+            badgeClass = 'badge-consensus-ai';
+            badgeIcon = '';
+        } else if (concordanceCode === 'consensus_real') {
+            badgeClass = 'badge-consensus-real';
+            badgeIcon = '';
+        } else if (concordanceCode === 'divergence') {
+            badgeClass = 'badge-divergence';
+            badgeIcon = '';
+        }
+
+        let html = `
+            <div class="neural-dual-container">
+                <div class="neural-concordance-badge ${badgeClass}">
+                    <span class="badge-icon">${badgeIcon}</span>
+                    <span class="badge-text">${concordanceText}</span>
+                </div>
+                <div class="neural-engines-grid">
+        `;
+
+        const eKeys = ['engine_1', 'engine_2'];
+        eKeys.forEach(k => {
+            const eng = engines[k];
+            if (!eng) return;
+            const engColor = getColorForScore(eng.score);
+            const certClass = eng.certainty === 'Alta' ? 'cert-high' : (eng.certainty === 'Média' ? 'cert-med' : 'cert-low');
+            const shortRole = k === 'engine_1' ? 'Motor 1 • Difusão' : 'Motor 2 • ViT Global';
+
+            html += `
+                <div class="neural-engine-card">
+                    <div class="engine-header">
+                        <span class="engine-role-tag">${shortRole}</span>
+                        <span class="engine-certainty-badge ${certClass}">${eng.certainty}</span>
+                    </div>
+                    <div class="engine-model-id" title="${eng.model_id}">${eng.model_short || eng.model_id}</div>
+                    <div class="engine-score-row">
+                        <span class="engine-score-val" style="color: ${engColor}">${eng.score}%</span>
+                        <span class="engine-arch-tag">${eng.architecture || 'Neural'}</span>
+                    </div>
+                    <div class="engine-minibar">
+                        <div class="engine-minibar-fill" style="width: ${eng.score}%; background-color: ${engColor};"></div>
+                    </div>
+                    <div class="engine-probs-row">
+                        <span>IA: <strong>${(eng.ai_prob * 100).toFixed(1)}%</strong></span>
+                        <span>Real: <strong>${(eng.real_prob * 100).toFixed(1)}%</strong></span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+        return html;
+    }
+
     function renderAnalysisCards(analyses) {
         analysisGrid.innerHTML = '';
 
         const cardDefs = [
             { key: 'metadata', icon: '', title: 'Análise de Metadados', desc: 'EXIF, C2PA, assinaturas de IA' },
-            { key: 'neural', icon: '', title: 'Detector Neural Especialista (Hugging Face)', desc: 'Vision Transformer pré-treinado em IA' },
+            { key: 'neural', icon: '', title: 'Detector Neural Dual-Engine (Hugging Face)', desc: 'Ensemble de Redes Neurais e Transformers Especialistas' },
             { key: 'clip', icon: '', title: 'Representação Latente (CLIP)', desc: 'Espaço latente multimodal ViT' },
             { key: 'wavelet', icon: '', title: 'Análise Wavelet (DWT)', desc: 'Decomposição multi-escala e textura' },
             { key: 'spectral', icon: '', title: 'Análise Espectral (FFT)', desc: 'Domínio de frequência e picos' },
@@ -461,7 +526,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Details
             if (data.details) {
-                if (def.key === 'metadata' && data.details.metadata) {
+                if (def.key === 'neural' && data.details.engines) {
+                    contentHTML += renderNeuralDualEngines(data.details);
+                } else if (def.key === 'metadata' && data.details.metadata) {
                     const metaEntries = Object.entries(data.details.metadata);
                     if (metaEntries.length > 0) {
                         // Show max 8 entries
