@@ -56,8 +56,8 @@
 
 /* --- Dark Theme Tokens --- */
 [data-theme="dark"] {
-    --bg-page: #0B0F19;
-    --bg-white: #111827;
+    --bg-page: #000000;
+    --bg-white: #0C0C0C;
     --bg-muted: #1A2438;
     --bg-accent-soft: rgba(89, 165, 216, 0.12);
 
