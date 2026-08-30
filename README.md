@@ -1,6 +1,6 @@
 # Spectra
 
-**Analisador Forense de Imagens com IA** — detecta se uma imagem foi gerada por inteligência artificial ou capturada por uma câmera física, combinando visão computacional profunda com modelo especialista pré-treinado (**Vision Transformer via Hugging Face**) e análise forense multi-espectral.
+**Analisador de Imagens geradas por IA** — detecta se uma imagem foi gerada por inteligência artificial ou capturada por uma câmera física, combinando visão computacional profunda com modelo especialista pré-treinado (**Vision Transformer via Hugging Face**) e análise forense multi-espectral.
 
 ---
 
