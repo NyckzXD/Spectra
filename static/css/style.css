@@ -78,8 +78,8 @@
     --color-ai: #F87171;
     --color-ai-bg: rgba(239, 68, 68, 0.16);
 
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
+    --text-primary: #FFFFFF;
+    --text-secondary: #C0C6D4;
     --text-muted: #64748B;
 
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -89,7 +89,7 @@
     --shadow-xl: 0 20px 35px rgba(0, 0, 0, 0.75);
 
     --gauge-track: #1E293B;
-    --card-hover-bg: #151F32;
+    --card-hover-bg: #0D1920;
     --lightbox-bg: rgba(3, 7, 18, 0.88);
 }
 
@@ -209,7 +209,7 @@ body {
 
 /* --- Theme Toggle Switch --- */
 .theme-toggle-btn {
-    background: var(--bg-muted);
+    background: var(--bg-page);
     border: 1px solid var(--border-light);
     padding: 3px;
     border-radius: 20px;
