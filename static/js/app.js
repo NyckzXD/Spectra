@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = document.getElementById('cancelBtn');
     const retryBtn = document.getElementById('retryBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
 
     const uploadSection = document.getElementById('uploadSection');
     const loadingSection = document.getElementById('loadingSection');
@@ -31,6 +32,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('errorMessage');
 
     let selectedFile = null;
+    let lastScore = null;
+
+    // --- Theme Management ---
+    function getPreferredTheme() {
+        try {
+            const savedTheme = localStorage.getItem('spectra-theme');
+            if (savedTheme) return savedTheme;
+        } catch (e) {}
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        try {
+            localStorage.setItem('spectra-theme', theme);
+        } catch (e) {}
+
+        // Redraw gauge if results are currently visible
+        if (lastScore !== null && resultsSection && !resultsSection.classList.contains('hidden')) {
+            drawScoreGauge(lastScore, false);
+        }
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || getPreferredTheme();
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    try {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('spectra-theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    } catch (e) {}
 
     // --- Utility Functions ---
     function formatFileSize(bytes) {
@@ -249,10 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Results Rendering ---
     function renderResults(data) {
+        lastScore = data.score;
         showSection(resultsSection);
 
         renderImageInfo(data.image_info, data.processing_time);
-        drawScoreGauge(data.score);
+        drawScoreGauge(data.score, true);
         renderVerdict(data.score, data.verdict, data.confidence, data.summary);
         renderKeyFindings(data.summary?.key_findings);
         renderAnalysisCards(data.analyses);
@@ -323,8 +365,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function drawScoreGauge(finalScore) {
+    function drawScoreGauge(finalScore, animated = true) {
         const canvas = document.getElementById('scoreGauge');
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
 
@@ -338,6 +381,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const centerY = 110;
         const radius = 88;
         const lineWidth = 14;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const trackColor = isDark ? '#1E293B' : '#E2E8F0';
+        const textColor = isDark ? '#F8FAFC' : '#0F172A';
+
+        if (!animated) {
+            ctx.clearRect(0, 0, 220, 220);
+
+            // Background track
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = trackColor;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Progress arc
+            const startAngle = 0.75 * Math.PI;
+            const endAngle = startAngle + (finalScore / 100) * (1.5 * Math.PI);
+            const color = getColorForScore(finalScore);
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = color;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Score text
+            ctx.fillStyle = textColor;
+            ctx.font = `bold 46px Outfit, Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${finalScore}`, centerX, centerY - 6);
+
+            // Label
+            ctx.font = `600 10px Inter, sans-serif`;
+            ctx.fillStyle = color;
+            ctx.fillText('PROBABILIDADE AI', centerX, centerY + 26);
+            return;
+        }
 
         let currentScore = 0;
         const animationDuration = 2200;
@@ -355,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
             ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = '#E2E8F0';
+            ctx.strokeStyle = trackColor;
             ctx.lineCap = 'round';
             ctx.stroke();
 
@@ -372,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
 
             // Score text
-            ctx.fillStyle = '#0F172A';
+            ctx.fillStyle = textColor;
             ctx.font = `bold 46px Outfit, Inter, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
