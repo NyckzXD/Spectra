@@ -30,36 +30,49 @@ def calculate_composite_score(analyses):
     """
     Calculate dynamically weighted composite score from all forensic analyses.
     Adapts weights based on metadata signal presence to prevent biasing images without EXIF.
+
+    O analisador Neural (Hugging Face pré-treinado) é o mais confiável e tem
+    peso dominante. Os demais analisadores funcionam como evidências forenses
+    complementares para refinar o score em casos limítrofes.
     """
     base_weights = {
-        'metadata': 0.20,    # dinâmico — mantém lógica original
-        'noise': 0.12,       # AUC 0.563 no dataset calibrado
-        'spectral': 0.05,    # AUC 0.403 — parcialmente invertido; peso reduzido
-        'statistical': 0.20, # AUC 0.764 — analisador estatístico
-        'wavelet': 0.18,     # DWT multi-escala
-        'artifacts': 0.05,   # Coeficiente de nitidez
-        'clip': 0.20,        # CLIP ViT-B/32 — representação latente
-        'neural': 0.35,      # EfficientNetV2 Transfer Learning — alta precisão supervisionada
+        'metadata':    0.15,   # dinâmico — aumentado se há sinal EXIF forte
+        'noise':       0.08,   # ruído de sensor Poisson-Gaussiano
+        'spectral':    0.04,   # FFT — sinal fraco; peso mínimo
+        'statistical': 0.12,   # entropia e Lei de Benford
+        'wavelet':     0.10,   # DWT multi-escala
+        'artifacts':   0.03,   # gradientes de borda e bokeh
+        'clip':        0.12,   # espaço latente multimodal
+        'neural':      0.60,   # detector pré-treinado HF — peso dominante
     }
 
+    # --- Ajuste dinâmico do metadata ---
     meta = analyses.get('metadata', {})
     has_meta_signal = meta.get('has_signal', False)
     meta_score = meta.get('score', 50)
 
     if has_meta_signal and meta_score >= 90:
-        base_weights['metadata'] = 0.45
+        base_weights['metadata'] = 0.40  # tag de IA forte → aumenta muito
     elif has_meta_signal and meta_score <= 15:
-        base_weights['metadata'] = 0.35
+        base_weights['metadata'] = 0.30  # EXIF autentico de câmera → sinal forte
     elif not has_meta_signal:
-        base_weights['metadata'] = 0.0
+        base_weights['metadata'] = 0.0   # sem EXIF → exclui do cálculo
+
+    # --- Boost dinâmico do neural quando certeza é Alta ---
+    neural = analyses.get('neural', {})
+    if neural and not neural.get('failed'):
+        n_metrics = neural.get('details', {}).get('metrics', {})
+        certainty = n_metrics.get('certeza_classificacao', 'Baixa')
+        if certainty == 'Alta':
+            base_weights['neural'] = 0.72   # boost: certeza alta → ainda mais dominante
+        elif certainty == 'Média':
+            base_weights['neural'] = 0.60   # mantém peso normal
 
     total_score = 0.0
     total_weight = 0.0
 
     for key, weight in base_weights.items():
-        # Analisadores que falharam (exceção interna) são EXCLUÍDOS do composite:
-        # antes, um score neutro (50) de fallback entrava como se fosse uma medição
-        # válida, distorcendo o resultado final sem avisar o usuário.
+        # Analisadores que falharam são EXCLUÍDOS do composite.
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             total_score += weight * analyses[key]['score']
             total_weight += weight
