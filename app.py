@@ -37,11 +37,11 @@ def calculate_composite_score(analyses):
     """
     base_weights = {
         'metadata':    0.15,   # dinâmico — aumentado se há sinal EXIF forte
-        'noise':       0.08,   # ruído de sensor Poisson-Gaussiano
+        'noise':       0.20,   # ruído de sensor Poisson-Gaussiano
         'spectral':    0.04,   # FFT — sinal fraco; peso mínimo
         'statistical': 0.12,   # entropia e Lei de Benford
         'wavelet':     0.10,   # DWT multi-escala
-        'artifacts':   0.03,   # gradientes de borda e bokeh
+        'artifacts':   0.01,   # gradientes de borda e bokeh
         'clip':        0.20,   # espaço latente multimodal
         'neural':      0.60,   # detector pré-treinado HF — peso dominante
     }
