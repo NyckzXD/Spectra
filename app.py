@@ -42,7 +42,7 @@ def calculate_composite_score(analyses):
         'statistical': 0.12,   # entropia e Lei de Benford
         'wavelet':     0.10,   # DWT multi-escala
         'artifacts':   0.03,   # gradientes de borda e bokeh
-        'clip':        0.12,   # espaço latente multimodal
+        'clip':        0.20,   # espaço latente multimodal
         'neural':      0.60,   # detector pré-treinado HF — peso dominante
     }
 
