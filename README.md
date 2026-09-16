@@ -62,8 +62,23 @@ pip install -r requirements.txt
 
 ### 2. Iniciar o Servidor
 ```bash
-python app.py
+python main.py
 ```
+
+Por padrão o servidor escuta apenas em `127.0.0.1` e **sem** modo debug. Configuração por variáveis de ambiente:
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `SPECTRA_DEBUG` | `0` | `1` ativa o debug do Flask (só funciona com host local) |
+| `SPECTRA_HOST` | `127.0.0.1` | `0.0.0.0` expõe na rede local (debug é desligado automaticamente) |
+| `SPECTRA_PORT` | `5000` | Porta do servidor |
+
+```bat
+set SPECTRA_DEBUG=1
+python main.py
+```
+
+> Os analisadores **Spectral** e **Artifacts** estão em modo informativo (peso 0 no score final): suas regras antigas não separavam fotos reais de imagens de IA no dataset de calibração. Eles continuam exibindo métricas e só sinalizam anomalias extremas.
 
 Acesse no navegador: `http://localhost:5000`
 Faça o upload ou cole (`Ctrl+V`) qualquer imagem para obter a análise completa!
