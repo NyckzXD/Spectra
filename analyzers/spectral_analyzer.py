@@ -132,39 +132,27 @@ def analyze_spectral(image_path: str) -> dict:
         lf_energy = np.mean(amp[lf_mask]) + 1e-6
         hf_lf_ratio = float(hf_energy / lf_energy)
 
-        # --- 6. Calibrated Symmetrical Scoring Model ---
+        # --- 6. Scoring apenas por anomalias extremas ---
+        # As regras antigas não separavam foto real de IA no dataset de calibração:
+        #   - hf_flatness ficou entre 0.95 e 0.98 em TODAS as imagens, então a regra
+        #     "> 0.85 → +14" somava 14 pontos para qualquer imagem;
+        #   - a contagem de picos foi MAIOR nas fotos reais (resampling/JPEG de fotos
+        #     em alta resolução), ou seja, a regra apontava na direção errada;
+        #   - alpha e R² caíram na faixa "natural" para as duas classes, então os
+        #     bônus de "foto real" também eram praticamente constantes.
+        # Resultado: AUC do score espectral = 0.40 (pior que aleatório).
+        # Agora o score parte de 50 (neutro) e só sobe diante de um espectro
+        # claramente fora do padrão físico. As métricas continuam sendo expostas.
+        # Este analisador é INFORMATIVO (peso 0 no composto) até ser recalibrado
+        # com um dataset maior e equilibrado em formato/resolução.
         score = 50.0
 
-        # Natural Power-Law Slope Alpha:
-        # Optical real photos: 0.85 <= alpha <= 1.30 with high R^2 (> 0.94)
-        if 0.85 <= alpha <= 1.30 and r_squared > 0.94:
-            score -= 20  # Strong natural optical 1/f falloff
-        elif 0.70 <= alpha <= 1.45 and r_squared > 0.90:
-            score -= 10  # Moderate natural falloff
-        elif alpha < 0.55 or alpha > 1.65:
-            score += 18  # Synthetic non-physical spectral decay
-        elif r_squared < 0.82:
-            score += 14  # Fragmented non-natural spectrum
-
-        # High-Frequency Flatness (AI diffusion noise floor):
-        # AI images tend to have flatter high-frequency noise floor (> 0.80)
-        # Natural optical falloff has lower flatness (< 0.65)
-        if hf_flatness > 0.85:
-            score += 14  # Flat synthetic noise floor (diffusion signature)
-        elif hf_flatness < 0.60:
-            score -= 10  # Natural smooth optical attenuation
-
-        # Anomalous Harmonic Spikes (GAN / Upscaler periodic fingerprints):
-        if anomalous_peaks >= 4:
-            score += min(anomalous_peaks * 4, 20)
-        elif anomalous_peaks == 0:
-            score -= 6   # Clean continuous natural spectrum
-
-        # Extreme High-to-Low frequency energy ratios:
+        if alpha < 0.55 or alpha > 1.90:
+            score += 15  # Decaimento espectral fisicamente implausível
+        if r_squared < 0.82:
+            score += 12  # Espectro fragmentado, sem lei de potência
         if hf_lf_ratio < 0.005:
-            score += 10  # Overly blurred/smoothed synthetic image
-        elif 0.015 <= hf_lf_ratio <= 0.15:
-            score -= 6   # Natural balance of photographic detail
+            score += 10  # Imagem excessivamente suavizada
 
         final_score = int(round(min(max(score, 0), 100)))
 
@@ -188,6 +176,7 @@ def analyze_spectral(image_path: str) -> dict:
 
         return {
             'score': final_score,
+            'informational': True,
             'details': {
                 'metrics': {
                     'spectral_slope_alpha': round(alpha, 4),
@@ -204,6 +193,9 @@ def analyze_spectral(image_path: str) -> dict:
     except Exception as e:
         return {
             'score': 50,
+            # 'failed' sinaliza ao app.py que este resultado NÃO é válido e deve
+            # ser excluído do score composto, da concordância e do resumo.
+            'failed': True,
             'details': {'metrics': {}, 'error': str(e)},
             'visualization': ''
         }

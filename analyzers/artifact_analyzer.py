@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from scipy import ndimage
 from PIL import Image
@@ -15,9 +14,29 @@ def analyze_artifacts(image_path: str) -> dict:
     Returns: {'score': int, 'details': {'metrics': {...}}}
     """
     try:
-        img = Image.open(image_path).convert('L')
+        with Image.open(image_path) as src:
+            source_format = (src.format or '').upper()
+            img = src.convert('L')
         arr = np.array(img, dtype=np.float32)
         h, w = arr.shape
+
+        # --- JPEG 8x8 Grid Boundary Ratio ---
+        # Calculado ANTES do redimensionamento: o resize destrói o alinhamento da
+        # grade 8x8 e fazia a métrica ficar ~1.00 em qualquer foto grande.
+        # Usa o formato real do arquivo (não a extensão).
+        # Mede compressão JPEG, não a origem da imagem — por isso é só informativo.
+        is_jpeg = source_format == 'JPEG'
+        jpeg_grid_ratio = 1.0
+        if is_jpeg and h >= 32 and w >= 32:
+            col_diffs = np.abs(np.diff(arr, axis=1)).mean(axis=0)  # diff entre col c-1 e c, c=1..w-1
+            row_diffs = np.abs(np.diff(arr, axis=0)).mean(axis=1)
+            col_idx = np.arange(1, w)
+            row_idx = np.arange(1, h)
+            boundary = np.concatenate([col_diffs[col_idx % 8 == 0], row_diffs[row_idx % 8 == 0]])
+            non_boundary = np.concatenate([col_diffs[col_idx % 8 != 0], row_diffs[row_idx % 8 != 0]])
+            avg_nb = float(np.mean(non_boundary)) if non_boundary.size else 0.0
+            if boundary.size and avg_nb > 0:
+                jpeg_grid_ratio = float(np.mean(boundary) / avg_nb)
 
         if max(h, w) > 1536:
             scale = 1536 / max(h, w)
@@ -82,77 +101,30 @@ def analyze_artifacts(image_path: str) -> dict:
         metrics['texture_variance'] = round(contrast_var, 2)
         metrics['texture_cv'] = round(contrast_cv, 4)
 
-        # --- 4. JPEG 8x8 Grid Boundary Ratio (Only meaningful for original JPEGs) ---
-        is_jpeg = False
-        ext = os.path.splitext(image_path)[1].lower()
-        if ext in ['.jpg', '.jpeg']:
-            is_jpeg = True
-
-        jpeg_grid_ratio = 1.0
-        if is_jpeg and h >= 32 and w >= 32:
-            boundary_diffs = []
-            non_boundary_diffs = []
-
-            for col in range(1, w):
-                diff = float(np.mean(np.abs(arr[:, col] - arr[:, col - 1])))
-                if col % 8 == 0:
-                    boundary_diffs.append(diff)
-                else:
-                    non_boundary_diffs.append(diff)
-
-            for row in range(1, h):
-                diff = float(np.mean(np.abs(arr[row, :] - arr[row - 1, :])))
-                if row % 8 == 0:
-                    boundary_diffs.append(diff)
-                else:
-                    non_boundary_diffs.append(diff)
-
-            avg_b = np.mean(boundary_diffs) if boundary_diffs else 0
-            avg_nb = np.mean(non_boundary_diffs) if non_boundary_diffs else 0
-
-            if avg_nb > 0:
-                jpeg_grid_ratio = float(avg_b / avg_nb)
-
         metrics['jpeg_grid_ratio'] = round(jpeg_grid_ratio, 4)
         metrics['is_jpeg_source'] = is_jpeg
 
-        # --- 5. Symmetrical Calibrated Scoring Model ---
+        # --- 5. Scoring apenas por anomalias extremas ---
+        # As regras antigas não separavam as classes no dataset de calibração
+        # (AUC do score = 0.40): edge_cv, texture_cv e entropia de orientação
+        # tiveram faixas praticamente iguais em fotos reais e imagens de IA, e o
+        # bônus do grid JPEG media o formato do arquivo, não a origem.
+        # Agora o score parte de 50 (neutro) e só sobe em casos extremos.
+        # Este analisador é INFORMATIVO (peso 0 no composto) até ser recalibrado.
         score = 50.0
 
-        # Optical Depth of Field (Edge CV): Real optical cameras have high edge sharpness variance
-        # due to focal plane and bokeh (edge_cv > 0.60). AI images often render uniform sharpness (edge_cv < 0.42).
-        if edge_cv > 0.65:
-            score -= 16  # Authentic optical lens depth-of-field
-        elif edge_cv > 0.52:
-            score -= 8
-        elif edge_cv < 0.38:
-            score += 16  # Unnatural uniform synthetic edge sharpness
-        elif edge_cv < 0.46:
-            score += 8
-
-        # Spatial Texture Complexity
-        if contrast_cv > 0.45:
-            score -= 10  # Natural depth and multi-object layering
-        elif contrast_cv < 0.18:
-            score += 12  # Synthetic flat scene composition
-
-        # Edge Orientation Entropy: Natural photos have rich multi-angle orientations
-        if edge_orientation_entropy > 4.8:
-            score -= 8   # Rich natural geometric diversity
-        elif edge_orientation_entropy < 4.0:
-            score += 10  # Biased AI diffusion brush/directionality
-
-        # JPEG Grid: Authentic camera JPEG compression blocks
-        if is_jpeg:
-            if jpeg_grid_ratio > 1.08:
-                score -= 12  # Clear authentic hardware JPEG compression grid
-            elif jpeg_grid_ratio < 0.98:
-                score += 8   # JPEG file without authentic DCT grid
+        if edge_cv < 0.20:
+            score += 10  # Nitidez de bordas uniformemente constante
+        if contrast_cv < 0.10:
+            score += 8   # Cena sem nenhuma variação de contraste entre regiões
+        if edge_orientation_entropy < 3.5:
+            score += 8   # Orientações de borda fortemente enviesadas
 
         final_score = int(round(min(max(score, 0), 100)))
 
         return {
             'score': final_score,
+            'informational': True,
             'details': {
                 'metrics': metrics
             }
@@ -161,5 +133,8 @@ def analyze_artifacts(image_path: str) -> dict:
     except Exception as e:
         return {
             'score': 50,
+            # 'failed' sinaliza ao app.py que este resultado NÃO é válido e deve
+            # ser excluído do score composto, da concordância e do resumo.
+            'failed': True,
             'details': {'metrics': {}, 'error': str(e)}
         }
