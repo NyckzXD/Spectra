@@ -1515,3 +1515,18 @@ canvas.card-visualization {
     font-size: 10px;
     color: var(--text-secondary);
 }
+/* Estado do analisador (falhou / informativo) */
+.card-status {
+    font-size: 11px;
+    margin: 6px 0 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: var(--text-muted);
+    border: 1px solid currentColor;
+}
+.card-status-failed {
+    color: var(--color-ai);
+}
+.metadata-table td {
+    overflow-wrap: anywhere;
+}

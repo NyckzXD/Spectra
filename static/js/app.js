@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Segurança: escapa qualquer dado vindo do servidor antes de ir para innerHTML ---
+    // Nome do arquivo, metadados EXIF/PNG e findings são controlados por quem envia a imagem.
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function safeNumber(value, fallback = 0) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
     // --- DOM References ---
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -315,11 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileSizeStr = formatFileSize(info.file_size);
 
         imageInfo.innerHTML = `
-            <div class="info-item"><span class="info-label">Arquivo</span><span class="info-value">${info.filename}</span></div>
-            <div class="info-item"><span class="info-label">Formato</span><span class="info-value">${info.format}</span></div>
-            <div class="info-item"><span class="info-label">Modo</span><span class="info-value">${info.mode || '—'}</span></div>
-            <div class="info-item"><span class="info-label">Dimensões</span><span class="info-value">${sizeStr} px</span></div>
-            <div class="info-item"><span class="info-label">Tamanho</span><span class="info-value">${fileSizeStr}</span></div>
+            <div class="info-item"><span class="info-label">Arquivo</span><span class="info-value">${escapeHtml(info.filename)}</span></div>
+            <div class="info-item"><span class="info-label">Formato</span><span class="info-value">${escapeHtml(info.format)}</span></div>
+            <div class="info-item"><span class="info-label">Modo</span><span class="info-value">${escapeHtml(info.mode || '—')}</span></div>
+            <div class="info-item"><span class="info-label">Dimensões</span><span class="info-value">${escapeHtml(sizeStr)} px</span></div>
+            <div class="info-item"><span class="info-label">Tamanho</span><span class="info-value">${escapeHtml(fileSizeStr)}</span></div>
         `;
     }
 
@@ -360,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         findings.forEach((finding, i) => {
             const chip = document.createElement('div');
             chip.className = 'finding-chip';
-            chip.innerHTML = `<span class="finding-icon">${icons[i % icons.length]}</span><span>${finding}</span>`;
+            chip.innerHTML = `<span class="finding-icon">${icons[i % icons.length]}</span><span>${escapeHtml(finding)}</span>`;
             keyFindingsList.appendChild(chip);
         });
     }
@@ -479,19 +495,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatValue(value) {
         if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
         if (typeof value === 'number') return Number.isInteger(value) ? value : value.toFixed(3);
-        if (Array.isArray(value)) return value.map(v => typeof v === 'number' ? v.toFixed(2) : v).join(', ');
+        if (Array.isArray(value)) return value.map(v => typeof v === 'number' ? v.toFixed(2) : escapeHtml(v)).join(', ');
         if (typeof value === 'object' && value !== null) {
-            return Object.entries(value).map(([k, v]) => `${k}: ${formatValue(v)}`).join(' | ');
+            return Object.entries(value).map(([k, v]) => `${escapeHtml(k)}: ${formatValue(v)}`).join(' | ');
         }
-        return String(value);
+        return escapeHtml(value);
     }
 
     function renderDetailsTable(obj) {
         if (!obj || Object.keys(obj).length === 0) return '';
         let html = '<table class="metadata-table"><tbody>';
         for (const [k, v] of Object.entries(obj)) {
-            const val = typeof v === 'string' && v.length > 100 ? v.substring(0, 100) + '…' : formatValue(v);
-            html += `<tr><td><strong>${k}</strong></td><td>${val}</td></tr>`;
+            const val = typeof v === 'string' && v.length > 100 ? escapeHtml(v.substring(0, 100)) + '…' : formatValue(v);
+            html += `<tr><td><strong>${escapeHtml(k)}</strong></td><td>${val}</td></tr>`;
         }
         html += '</tbody></table>';
         return html;
@@ -502,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '<ul class="details-list">';
         for (const [k, v] of Object.entries(obj)) {
             const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            html += `<li><strong>${formattedKey}:</strong> ${formatValue(v)}</li>`;
+            html += `<li><strong>${escapeHtml(formattedKey)}:</strong> ${formatValue(v)}</li>`;
         }
         html += '</ul>';
         return html;
@@ -531,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="neural-dual-container">
                 <div class="neural-concordance-badge ${badgeClass}">
                     <span class="badge-icon">${badgeIcon}</span>
-                    <span class="badge-text">${concordanceText}</span>
+                    <span class="badge-text">${escapeHtml(concordanceText)}</span>
                 </div>
                 <div class="neural-engines-grid">
         `;
@@ -540,7 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
         eKeys.forEach(k => {
             const eng = engines[k];
             if (!eng) return;
-            const engColor = getColorForScore(eng.score);
+            const engScore = safeNumber(eng.score, 50);
+            const engColor = getColorForScore(engScore);
             const certClass = eng.certainty === 'Alta' ? 'cert-high' : (eng.certainty === 'Média' ? 'cert-med' : 'cert-low');
             const shortRole = k === 'engine_1' ? 'Motor 1 • Difusão' : 'Motor 2 • ViT Global';
 
@@ -548,19 +565,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="neural-engine-card">
                     <div class="engine-header">
                         <span class="engine-role-tag">${shortRole}</span>
-                        <span class="engine-certainty-badge ${certClass}">${eng.certainty}</span>
+                        <span class="engine-certainty-badge ${certClass}">${escapeHtml(eng.certainty)}</span>
                     </div>
-                    <div class="engine-model-id" title="${eng.model_id}">${eng.model_short || eng.model_id}</div>
+                    <div class="engine-model-id" title="${escapeHtml(eng.model_id)}">${escapeHtml(eng.model_short || eng.model_id)}</div>
                     <div class="engine-score-row">
-                        <span class="engine-score-val" style="color: ${engColor}">${eng.score}%</span>
-                        <span class="engine-arch-tag">${eng.architecture || 'Neural'}</span>
+                        <span class="engine-score-val" style="color: ${engColor}">${engScore}%</span>
+                        <span class="engine-arch-tag">${escapeHtml(eng.architecture || 'Neural')}</span>
                     </div>
                     <div class="engine-minibar">
-                        <div class="engine-minibar-fill" style="width: ${eng.score}%; background-color: ${engColor};"></div>
+                        <div class="engine-minibar-fill" style="width: ${engScore}%; background-color: ${engColor};"></div>
                     </div>
                     <div class="engine-probs-row">
-                        <span>IA: <strong>${(eng.ai_prob * 100).toFixed(1)}%</strong></span>
-                        <span>Real: <strong>${(eng.real_prob * 100).toFixed(1)}%</strong></span>
+                        <span>IA: <strong>${(safeNumber(eng.ai_prob) * 100).toFixed(1)}%</strong></span>
+                        <span>Real: <strong>${(safeNumber(eng.real_prob) * 100).toFixed(1)}%</strong></span>
                     </div>
                 </div>
             `;
@@ -599,11 +616,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let contentHTML = '';
 
+            // Estado do analisador: falhou (excluído do score) ou apenas informativo (peso 0)
+            if (data.failed) {
+                const errMsg = data.details && data.details.error ? `: ${escapeHtml(data.details.error)}` : '';
+                contentHTML += `<p class="card-status card-status-failed">Analisador falhou e foi excluído do score${errMsg}</p>`;
+            } else if (data.informational) {
+                contentHTML += '<p class="card-status card-status-info">Informativo — não entra no score final até ser recalibrado</p>';
+            }
+
             // Findings
             if (data.findings && data.findings.length > 0) {
                 contentHTML += '<ul class="card-findings">';
                 data.findings.forEach(f => {
-                    contentHTML += `<li>${f}</li>`;
+                    contentHTML += `<li>${escapeHtml(f)}</li>`;
                 });
                 contentHTML += '</ul>';
             }
@@ -629,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Visualization
             if (data.visualization) {
-                contentHTML += `<img src="data:image/png;base64,${data.visualization}" class="card-visualization" alt="${def.title}" title="Clique para ampliar">`;
+                contentHTML += `<img src="data:image/png;base64,${escapeHtml(data.visualization)}" class="card-visualization" alt="${def.title}" title="Clique para ampliar">`;
             } else if (def.key === 'statistical' && data.histogram_data) {
                 contentHTML += `<div style="height: 120px; width: 100%; margin-top: 12px;"><canvas id="chart-${def.key}" class="card-visualization"></canvas></div>`;
             }
@@ -642,10 +667,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="score-bar-container">
-                    <div class="score-bar-fill" style="background-color: ${color};" data-target="${data.score}%"></div>
+                    <div class="score-bar-fill" style="background-color: ${color};" data-target="${safeNumber(data.score, 50)}%"></div>
                 </div>
                 <div class="card-content">
-                    <span class="card-score-text" style="color: ${color}">Score: ${data.score}%</span>
+                    <span class="card-score-text" style="color: ${color}">Score: ${safeNumber(data.score, 50)}%</span>
                     ${contentHTML}
                 </div>
             `;

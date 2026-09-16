@@ -203,6 +203,9 @@ def analyze_metadata(image_path: str) -> dict:
     except Exception as e:
         return {
             'score': 50,
+            # 'failed' sinaliza ao app.py que este resultado NÃO é válido e deve
+            # ser excluído do score composto, da concordância e do resumo.
+            'failed': True,
             'has_signal': False,
             'findings': [f"Erro na leitura de metadados: {str(e)}"],
             'details': {'metadata': {}}

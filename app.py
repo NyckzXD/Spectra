@@ -38,10 +38,10 @@ def calculate_composite_score(analyses):
     base_weights = {
         'metadata':    0.15,   # dinâmico — aumentado se há sinal EXIF forte
         'noise':       0.20,   # ruído de sensor Poisson-Gaussiano
-        'spectral':    0.04,   # FFT — sinal fraco; peso mínimo
+        'spectral':    0.0,    # FFT — informativo: regras não separavam as classes (AUC 0.40)
         'statistical': 0.12,   # entropia e Lei de Benford
         'wavelet':     0.10,   # DWT multi-escala
-        'artifacts':   0.01,   # gradientes de borda e bokeh
+        'artifacts':   0.0,    # bordas/bokeh — informativo: regras não separavam as classes (AUC 0.40)
         'clip':        0.20,   # espaço latente multimodal
         'neural':      0.60,   # detector pré-treinado HF — peso dominante
     }
@@ -72,6 +72,8 @@ def calculate_composite_score(analyses):
     total_weight = 0.0
 
     for key, weight in base_weights.items():
+        if weight <= 0:
+            continue
         # Analisadores que falharam são EXCLUÍDOS do composite.
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             total_score += weight * analyses[key]['score']
@@ -89,7 +91,9 @@ def calculate_concordance(analyses):
     Returns confidence level ('high', 'medium', 'low') and agreement ratio.
     """
     scores = []
-    for key in ['noise', 'spectral', 'statistical', 'wavelet', 'artifacts', 'clip', 'neural']:
+    # spectral e artifacts ficam de fora: são informativos (peso 0) e quase
+    # sempre ficam em 50, o que distorceria a concordância para "inconclusivo".
+    for key in ['noise', 'statistical', 'wavelet', 'clip', 'neural']:
         if key in analyses and 'score' in analyses[key] and not analyses[key].get('failed'):
             scores.append(analyses[key]['score'])
 
@@ -165,13 +169,22 @@ def generate_summary(score, verdict, confidence, analyses):
 
     key_findings = []
 
-    if 'metadata' in analyses:
+    def usable(key):
+        """Só gera achados de analisadores que rodaram com sucesso.
+        Um analisador que falhou devolve métricas vazias, e os valores padrão
+        dos .get() abaixo produziriam achados falsos."""
+        data = analyses.get(key)
+        return bool(data) and not data.get('failed') and bool(
+            key == 'metadata' or data.get('details', {}).get('metrics')
+        )
+
+    if usable('metadata'):
         meta = analyses['metadata']
         if meta.get('findings'):
             for f in meta['findings'][:2]:
                 key_findings.append(f)
 
-    if 'noise' in analyses:
+    if usable('noise'):
         noise = analyses['noise']
         metrics = noise.get('details', {}).get('metrics', {})
         p_corr = metrics.get('poisson_correlation', 0)
@@ -183,21 +196,21 @@ def generate_summary(score, verdict, confidence, analyses):
         if b_noise >= 8.087:
             key_findings.append("Desvio-padrão do canal azul elevado — padrão consistente com síntese algorítmica")
 
-    if 'spectral' in analyses:
+    if usable('spectral'):
         spec = analyses['spectral']
         metrics = spec.get('details', {}).get('metrics', {})
-        flatness = metrics.get('hf_spectral_flatness', 0.5)
-        peaks = metrics.get('anomalous_peaks', 0)
-        alpha = metrics.get('spectral_slope_alpha', 1.0)
-        r2 = metrics.get('power_law_fit_r2', 1.0)
-        if flatness >= 0.9705:
-            key_findings.append("Planura espectral de alta frequência elevada — forte indicador de síntese por IA (AUC=0.875)")
-        elif 0.85 <= alpha <= 1.30 and r2 > 0.989:
-            key_findings.append("Decaimento espectral de Fourier aderente à lei de potência óptica natural (1/f)")
-        elif peaks >= 3:
-            key_findings.append("Picos harmônicos periódicos detectados no espectro de Fourier")
+        alpha = metrics.get('spectral_slope_alpha')
+        r2 = metrics.get('power_law_fit_r2')
+        hf_lf = metrics.get('hf_lf_energy_ratio')
+        # Só anomalias extremas viram achado (mesmos limiares do spectral_analyzer).
+        if alpha is not None and (alpha < 0.55 or alpha > 1.90):
+            key_findings.append("Decaimento espectral de Fourier fisicamente implausível (fora da lei 1/f)")
+        elif r2 is not None and r2 < 0.82:
+            key_findings.append("Espectro de Fourier fragmentado, sem aderência à lei de potência")
+        elif hf_lf is not None and hf_lf < 0.005:
+            key_findings.append("Energia de alta frequência quase ausente — imagem excessivamente suavizada")
 
-    if 'statistical' in analyses:
+    if usable('statistical'):
         stat = analyses['statistical']
         metrics = stat.get('details', {}).get('metrics', {})
         r_entropy = metrics.get('r_entropy', 0)
@@ -207,14 +220,14 @@ def generate_summary(score, verdict, confidence, analyses):
         benford_dev = metrics.get('benford_deviation', 0)
         if r_entropy >= 7.104 and g_entropy >= 7.038:
             key_findings.append("Entropia dos canais RGB alta e equilibrada — padrão de imagem fotográfica natural (AUC=0.847)")
-        elif r_entropy < 7.104 or g_entropy < 7.038:
+        else:
             key_findings.append("Entropia de canal reduzida — frequente em imagens sintéticas (limiar calibrado)")
         if benford_dev >= 0.137:
             key_findings.append("Desvio da Lei de Benford acima do limiar calibrado — indicador de síntese algorítmica")
         elif benford_corr > 0.973:
             key_findings.append("Gradientes aderem à Lei de Benford natural de superfícies físicas")
 
-    if 'wavelet' in analyses:
+    if usable('wavelet'):
         wav = analyses['wavelet']
         metrics = wav.get('details', {}).get('metrics', {})
         kurt_fine = metrics.get('kurtosis_fine', 3.0)
@@ -229,7 +242,7 @@ def generate_summary(score, verdict, confidence, analyses):
         elif spatial_cv > 0.90:
             key_findings.append("Alta variância espacial de detalhe — variação natural de foco e profundidade de campo")
 
-    if 'clip' in analyses and not analyses['clip'].get('failed'):
+    if usable('clip'):
         clip_data = analyses['clip']
         clip_metrics = clip_data.get('details', {}).get('metrics', {})
         diff = clip_metrics.get('similarity_diff', 0.0)
@@ -240,7 +253,7 @@ def generate_summary(score, verdict, confidence, analyses):
         elif diff < -0.04:
             key_findings.append(f"Embedding CLIP posicionado na região de fotografias reais no espaço latente {mode_label}")
 
-    if 'neural' in analyses and not analyses['neural'].get('failed'):
+    if usable('neural'):
         neural_data = analyses['neural']
         n_metrics = neural_data.get('details', {}).get('metrics', {})
         ai_prob = n_metrics.get('probabilidade_ai', 0.5)
@@ -251,11 +264,8 @@ def generate_summary(score, verdict, confidence, analyses):
         elif real_prob >= 0.70:
             key_findings.append(f"Detector Neural ({model_name}) classificou como foto autêntica com probabilidade de {real_prob:.1%}")
 
-    if 'artifacts' in analyses:
-        art = analyses['artifacts']
-        metrics = art.get('details', {}).get('metrics', {})
-        if metrics.get('edge_sharpness_cv', 0.5) > 0.62:
-            key_findings.append("Gradiente de profundidade de campo óptico (bokeh/foco natural)")
+    if usable('artifacts') and analyses['artifacts'].get('score', 50) > 50:
+        key_findings.append("Artefatos de borda/textura extremamente uniformes (analisador informativo)")
 
     if confidence == 'high':
         summary_parts.append("Os analisadores forenses estão em forte concordância técnica.")
@@ -326,7 +336,6 @@ def analyze():
             ('artifacts', analyze_artifacts, original_path),
         ]
 
-        failed_analyzers = []
         for key, func, path in analyzer_configs:
             try:
                 analyses[key] = func(path)
@@ -337,11 +346,14 @@ def analyze():
                 analyses[key] = {
                     'score': 50,
                     'failed': True,
-                    'details': {'metrics': {}},
+                    'details': {'metrics': {}, 'error': str(e)},
                     'findings': [f'Erro na análise: {str(e)}']
                 }
-                failed_analyzers.append(key)
                 traceback.print_exc()
+
+        # Inclui também os analisadores que capturaram o próprio erro e
+        # devolveram 'failed': True (ex.: modelo neural não carregado).
+        failed_analyzers = [k for k, _, _ in analyzer_configs if analyses.get(k, {}).get('failed')]
 
         score = calculate_composite_score(analyses)
         verdict, verdict_level = get_verdict(score)
@@ -391,5 +403,25 @@ def analyze():
                 pass
 
 
+def _run_config():
+    """
+    Configuração do servidor via variáveis de ambiente.
+
+    Por padrão o servidor escuta só em 127.0.0.1 e sem debug: o debugger do
+    Werkzeug permite executar código arbitrário, então nunca deve ficar exposto
+    na rede. Para desenvolvimento local:
+        set SPECTRA_DEBUG=1            (Windows)   /  export SPECTRA_DEBUG=1
+    Para acessar de outro dispositivo da rede (sem debug):
+        set SPECTRA_HOST=0.0.0.0
+    """
+    debug = os.environ.get('SPECTRA_DEBUG', '0').strip().lower() in ('1', 'true', 'yes')
+    host = os.environ.get('SPECTRA_HOST', '127.0.0.1').strip()
+    port = int(os.environ.get('SPECTRA_PORT', '5000'))
+    if debug and host not in ('127.0.0.1', 'localhost', '::1'):
+        print(f"[Spectra] AVISO: debug desativado porque o host '{host}' expõe o servidor na rede.")
+        debug = False
+    return {'debug': debug, 'host': host, 'port': port}
+
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(**_run_config())
